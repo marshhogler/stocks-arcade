@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080c14">
+  <title>Stocks Arcade — Online Party</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Stocks Arcade home"><span class="brand-mark">S<span>↑</span></span><span>STOCKS <b>ARCADE</b><small>ONLINE PARTY</small></span></a>
+    <div class="connection"><span id="connectionDot" class="dot"></span><span id="connectionText">CONNECTING</span></div>
+  </header>
+
+  <main class="shell">
+    <section id="setupView" class="view">
+      <div class="hero">
+        <div class="eyebrow"><span class="pulse"></span> MULTIPLAYER MARKET SIMULATOR</div>
+        <h1>TRADE SMART.<br><span>BE THE LAST WORD.</span></h1>
+        <p>Create a private room or join your friends. Watch the market move, read the news, and build the highest net worth before the final turn.</p>
+        <div class="hero-stats"><div><strong>08</strong><small>PLAYERS MAX</small></div><div><strong>01</strong><small>SHARED MARKET</small></div><div><strong>∞</strong><small>WAYS TO TRADE</small></div></div>
+      </div>
+
+      <div class="setup-grid">
+        <section class="panel create-panel">
+          <div class="panel-head"><span class="panel-icon green">＋</span><div><h2>Create a room</h2><p>Set the market, then invite your crew.</p></div></div>
+          <form id="createForm">
+            <label for="createName">TRADER NAME</label>
+            <input id="createName" name="name" maxlength="16" value="Trader" placeholder="Your name" required>
+            <div class="field-grid">
+              <div><label for="startCash">STARTING CASH ($)</label><input id="startCash" type="number" min="10" max="10000" step="10" value="200" required></div>
+              <div><label for="startPrice">OPENING PRICE ($)</label><input id="startPrice" type="number" min="1" max="1000" step="1" value="10" required></div>
+              <div><label for="startStocks">STARTING SHARES</label><input id="startStocks" type="number" min="0" max="100" step="1" value="10" required></div>
+              <div><label for="maxTurns">TOTAL TURNS</label><input id="maxTurns" type="number" min="5" max="200" step="1" value="50" required></div>
+            </div>
+            <label for="difficulty">MARKET DIFFICULTY</label>
+            <select id="difficulty"><option>Easy</option><option selected>Normal</option><option>Hard</option><option>Extreme</option></select>
+            <label class="toggle-row" for="volatility"><span><b>Market volatility</b><small>Allow random swings and market news.</small></span><input type="checkbox" id="volatility" checked><span class="toggle-ui"></span></label>
+            <button class="btn btn-primary" type="submit">CREATE PRIVATE ROOM <span>↗</span></button>
+          </form>
+        </section>
+
+        <section class="panel join-panel">
+          <div class="panel-head"><span class="panel-icon blue">↗</span><div><h2>Join a room</h2><p>Enter the six-character code from your host.</p></div></div>
+          <form id="joinForm">
+            <label for="joinName">TRADER NAME</label>
+            <input id="joinName" maxlength="16" value="Trader 2" placeholder="Your name" required>
+            <label for="roomCode">ROOM CODE</label>
+            <input id="roomCode" class="code-input" maxlength="6" placeholder="A7K9PX" autocomplete="off" spellcheck="false" required>
+            <button class="btn btn-blue" type="submit">JOIN ROOM <span>→</span></button>
+          </form>
+          <div class="divider-label"><span></span> HOW IT WORKS <span></span></div>
+          <div class="steps"><div><i>01</i><p><b>Get in the room</b><small>Host a room or enter a code.</small></p></div><div><i>02</i><p><b>Ready up</b><small>Everyone readies before launch.</small></p></div><div><i>03</i><p><b>Make your move</b><small>Trade on your turn. Finish on top.</small></p></div></div>
+        </section>
+      </div>
+      <p class="small-note">Online multiplayer requires the Stocks Arcade server to be running. For internet play, deploy this project as a Render Web Service.</p>
+    </section>
+
+    <section id="lobbyView" class="view hidden">
+      <div class="section-top"><div><div class="eyebrow">PRIVATE SESSION</div><h1>PARTY <span>LOBBY</span></h1><p>Bring your crew together. All traders must be ready to launch.</p></div><button id="lobbyLeave" class="btn btn-ghost">← LEAVE ROOM</button></div>
+      <div class="room-banner panel"><div><small>YOUR ROOM CODE</small><div class="room-code" id="lobbyCode">------</div><p>Share this code with your friends</p></div><button id="copyCode" class="btn btn-blue">COPY CODE ▣</button></div>
+      <div class="lobby-grid">
+        <section class="panel"><div class="panel-title"><h2>TRADERS</h2><span class="count-pill" id="lobbyCount">0 / 8</span></div><div id="lobbyPlayers" class="player-list"></div><div id="lobbyEmpty" class="empty-hint">Waiting for traders to join…</div></section>
+        <section class="panel settings-card"><div class="panel-title"><h2>MARKET SETTINGS</h2><span class="live-pill">● LIVE</span></div><div id="lobbySettings" class="settings-list"></div><div class="lobby-actions"><button id="readyButton" class="btn btn-primary">✓ READY</button><button id="startButton" class="btn btn-blue hidden">START MATCH ↗</button></div><p id="startHint" class="action-hint">Waiting for at least 2 players.</p></section>
+      </div>
+    </section>
+
+    <section id="gameView" class="view hidden">
+      <div class="game-top"><div><div class="eyebrow">LIVE MARKET // MULTIPLAYER</div><h1>STOCKS <span>ARCADE</span></h1></div><div class="game-meta"><div><small>ROOM</small><strong id="gameRoomCode">------</strong></div><div><small>TURN</small><strong id="turnLabel">0 / 50</strong></div><button id="gameLeave" class="btn btn-ghost">LEAVE</button></div></div>
+      <div id="eventBanner" class="event-banner hidden"></div>
+      <div class="market-metrics"><div class="metric-card"><small>SHARE PRICE</small><strong id="marketPrice">$10.00</strong><span id="marketMove" class="metric-foot">MARKET OPEN</span></div><div class="metric-card"><small>YOUR NET WORTH</small><strong id="myWorth">$300.00</strong><span class="metric-foot">CASH + SHARES</span></div><div class="metric-card"><small>YOUR CASH</small><strong id="myCash">$200.00</strong><span class="metric-foot">AVAILABLE TO TRADE</span></div><div class="metric-card"><small>YOUR SHARES</small><strong id="myStocks">10</strong><span class="metric-foot">IN YOUR PORTFOLIO</span></div></div>
+      <div class="game-grid">
+        <section class="panel chart-panel"><div class="panel-title"><div><h2>MARKET MOVEMENT</h2><p>Shared stock price history</p></div><div class="chart-legend"><i></i> STOCK PRICE</div></div><div class="chart-wrap"><canvas id="priceChart" aria-label="Shared market price chart"></canvas></div><div class="chart-foot"><span>RSI <b id="rsiValue">50.0</b></span><span>TREND <b id="trendValue">0.00%</b></span><span>VOLUME <b id="volumeValue">100</b></span></div></section>
+        <section class="panel trade-panel"><div class="panel-title"><div><h2>YOUR MOVE</h2><p id="turnMessage">Waiting for market data…</p></div><span id="turnBadge" class="turn-badge">WAIT</span></div><div class="quantity-box"><label for="quantity">SHARES TO TRADE</label><div class="quantity-control"><button id="qtyMinus" type="button" aria-label="Decrease quantity">−</button><input id="quantity" type="number" value="1" min="1" max="20"><button id="qtyPlus" type="button" aria-label="Increase quantity">＋</button></div><div class="trade-estimate">ESTIMATED TOTAL <strong id="estimateValue">$10.00</strong></div></div><div class="trade-buttons"><button id="buyButton" class="btn btn-primary">↑ BUY SHARES</button><button id="sellButton" class="btn btn-danger">↓ SELL SHARES</button><button id="skipButton" class="btn btn-ghost">SKIP TURN →</button></div><p class="trade-disclaimer">Trades are validated by the server. Buying needs enough cash; selling needs enough shares.</p></section>
+      </div>
+      <section class="panel scoreboard"><div class="panel-title"><div><h2>TRADER STANDINGS</h2><p>Live net worth leaderboard</p></div><span class="count-pill" id="gamePlayerCount">0 PLAYERS</span></div><div id="gamePlayers" class="standing-list"></div></section>
+    </section>
+
+    <section id="winnerView" class="view hidden">
+      <div class="winner-hero"><div class="trophy">✦</div><div class="eyebrow">MARKET CLOSED</div><h1>GAME <span>OVER</span></h1><p id="winnerSubtitle">The final standings are in.</p></div>
+      <section class="panel final-panel"><div class="panel-title"><h2>FINAL STANDINGS</h2><span class="live-pill">FINAL</span></div><div id="finalRankings" class="final-rankings"></div><div class="final-actions"><button id="winnerLobby" class="btn btn-blue">RETURN TO LOBBY</button><button id="winnerLeave" class="btn btn-ghost">LEAVE PARTY</button></div></section>
+    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+  <footer><span>STOCKS ARCADE <b>ONLINE</b></span><span>TRADE WISELY · PLAY FAIR</span></footer>
+  <script src="app.js" defer></script>
+</body>
+</html>

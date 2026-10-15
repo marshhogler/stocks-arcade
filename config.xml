@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<stocksArcade>
+  <appName>Stocks Arcade</appName>
+  <mode>online-party</mode>
+  <room maxPlayers="8" codeLength="6" minPlayersToStart="2" />
+  <trading minQuantity="1" maxQuantity="20" />
+  <settings>
+    <setting key="start_price" min="1" max="1000" default="10" />
+    <setting key="start_cash" min="10" max="10000" default="200" />
+    <setting key="start_stocks" min="0" max="100" default="10" />
+    <setting key="max_turns" min="5" max="200" default="50" />
+  </settings>
+  <difficulties>
+    <difficulty name="Easy" volatilityMultiplier="0.6" />
+    <difficulty name="Normal" volatilityMultiplier="1.0" />
+    <difficulty name="Hard" volatilityMultiplier="1.6" />
+    <difficulty name="Extreme" volatilityMultiplier="2.4" />
+  </difficulties>
+</stocksArcade>
