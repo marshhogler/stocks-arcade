@@ -348,3 +348,14 @@ async function loadXmlConfig() {
 
 connect();
 loadXmlConfig();
+
+setInterval(() => {
+  const socket = state.ws;
+
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: "PING",
+      timestamp: Date.now()
+    }));
+  }
+}, 30_000);
