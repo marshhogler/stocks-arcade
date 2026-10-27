@@ -1,0 +1,4482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#010309">
+<title>STOCKS ARCADE — Cyberpunk Trading Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #010309;
+  --panel-bg: rgba(4, 12, 28, 0.90);
+  --panel-border: #00d9ff;
+  --panel-border-dim: #0c3358;
+  --panel-glow: rgba(0, 217, 255, 0.25);
+  --cyan: #00f0ff;
+  --cyan-bright: #62efff;
+  --cyan-glow: rgba(0, 240, 255, 0.5);
+  --green: #00ff75;
+  --green-glow: rgba(0, 255, 117, 0.55);
+  --red: #ff2a6d;
+  --red-glow: rgba(255, 42, 109, 0.55);
+  --gold: #ffd23b;
+  --gold-glow: rgba(255, 210, 59, 0.55);
+  --magenta: #f344ff;
+  --magenta-glow: rgba(243, 68, 255, 0.5);
+  --purple: #cb70ff;
+  --amber: #ffaa00;
+  --text: #e6f6ff;
+  --muted: #5f86a5;
+  --font-arcade: 'Press Start 2P', 'VT323', 'Courier New', monospace;
+  --font-mono: 'Share Tech Mono', 'VT323', Consolas, 'Courier New', monospace;
+  --radius-btn: 12px;
+  --radius-card: 14px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  overflow-x: hidden;
+  user-select: none;
+}
+
+body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at 50% 50%, #061129 0%, #020716 55%, #010309 100%);
+}
+
+/* Mathematical Procedural Background Canvas */
+.cyber-bg-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Subtle CRT Monitor Scanlines & Vignette */
+.arcade-crt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 90;
+  background: 
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%),
+    radial-gradient(circle at center, transparent 65%, rgba(0, 4, 12, 0.72) 100%);
+  background-size: 100% 3px, 100% 100%;
+  opacity: 0.8;
+}
+
+/* =========================================================
+   FEATURE 3 & 4: MULTILINE FLOATING MARKET NEWS PANELS
+   ========================================================= */
+.floating-news-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.floating-news-card {
+  position: absolute;
+  width: 290px;
+  max-width: 90vw;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(3, 11, 26, 0.88);
+  border: 1px solid var(--panel-border-dim);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 1.2s ease, transform 1.2s ease, border-color 0.8s ease, box-shadow 0.8s ease;
+}
+
+.floating-news-card.active {
+  opacity: 0.94;
+  transform: translateY(0);
+}
+
+.news-card-badge {
+  font-family: var(--font-arcade);
+  font-size: 7.5px;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.news-card-badge::before {
+  content: '●';
+  font-size: 8px;
+  color: var(--gold);
+}
+
+.news-card-headline {
+  font-family: var(--font-arcade);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  line-height: 1.35;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.news-card-story {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: #c0ddf4;
+  line-height: 1.45;
+  margin: 0 0 7px;
+  text-align: left;
+}
+
+.news-card-impact {
+  font-family: var(--font-arcade);
+  font-size: 7.8px;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+/* Color Sentiment Accents */
+.floating-news-card.news-bullish {
+  border-color: rgba(0, 255, 117, 0.5);
+  box-shadow: 0 0 16px var(--green-glow);
+}
+.floating-news-card.news-bullish .news-card-headline {
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green-glow);
+}
+.floating-news-card.news-bullish .news-card-impact {
+  color: var(--green);
+}
+
+.floating-news-card.news-bearish {
+  border-color: rgba(255, 42, 109, 0.5);
+  box-shadow: 0 0 16px var(--red-glow);
+}
+.floating-news-card.news-bearish .news-card-headline {
+  color: var(--red);
+  text-shadow: 0 0 8px var(--red-glow);
+}
+.floating-news-card.news-bearish .news-card-impact {
+  color: var(--red);
+}
+
+.floating-news-card.news-neutral, .floating-news-card.news-macro {
+  border-color: rgba(0, 240, 255, 0.45);
+  box-shadow: 0 0 16px var(--cyan-glow);
+}
+.floating-news-card.news-neutral .news-card-headline, .floating-news-card.news-macro .news-card-headline {
+  color: var(--cyan);
+  text-shadow: 0 0 8px var(--cyan-glow);
+}
+.floating-news-card.news-neutral .news-card-impact, .floating-news-card.news-macro .news-card-impact {
+  color: var(--cyan);
+}
+
+/* Float Drift Animations */
+@keyframes drift1 { 0% { transform: translate(0, 0); } 100% { transform: translate(6px, -8px); } }
+@keyframes drift2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-8px, 6px); } }
+@keyframes drift3 { 0% { transform: translate(0, 0); } 100% { transform: translate(8px, 8px); } }
+@keyframes drift4 { 0% { transform: translate(0, 0); } 100% { transform: translate(-6px, -6px); } }
+
+.drift-1 { animation: drift1 6.5s infinite alternate ease-in-out; }
+.drift-2 { animation: drift2 7.8s infinite alternate ease-in-out; }
+.drift-3 { animation: drift3 7.2s infinite alternate ease-in-out; }
+.drift-4 { animation: drift4 8.5s infinite alternate ease-in-out; }
+
+/* Top Window Controls (Top Right) */
+.win-controls {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(3, 10, 25, 0.88);
+  border: 1px solid #143555;
+  border-radius: 999px;
+  padding: 4px 8px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 14px rgba(0, 200, 255, 0.2);
+}
+
+.win-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--cyan);
+  background: #06152e;
+  color: var(--cyan);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.1s, background-color 0.15s, box-shadow 0.15s;
+}
+
+.win-btn:hover {
+  background: #0d2b5c;
+  box-shadow: 0 0 8px var(--cyan-glow);
+  transform: scale(1.1);
+}
+
+.win-btn.close {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.win-btn.close:hover {
+  background: #470e1f;
+  box-shadow: 0 0 8px var(--red-glow);
+}
+
+/* Main Container */
+.arcade-container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 680px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 14px 14px calc(74px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cyberpunk Terminal Header Bar */
+.cyber-terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: rgba(3, 11, 28, 0.85);
+  border: 1px solid var(--panel-border-dim);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.cyber-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cyber-brand-title {
+  font-family: var(--font-arcade);
+  font-size: 13px;
+  color: var(--gold);
+  text-shadow: 0 0 10px var(--gold-glow);
+  letter-spacing: 0.14em;
+}
+
+.cyber-brand-title span {
+  color: var(--cyan);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+.cyber-brand-sub {
+  font-family: var(--font-arcade);
+  font-size: 8.5px;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+}
+
+.cyber-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arcade-chip {
+  font-family: var(--font-arcade);
+  font-size: 8.5px;
+  color: var(--cyan-bright);
+  background: rgba(3, 14, 34, 0.9);
+  border: 1px solid var(--cyan);
+  border-radius: 999px;
+  padding: 5px 10px;
+  letter-spacing: 0.12em;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.25);
+  white-space: nowrap;
+}
+
+/* Main Menu / Title Screen Layout */
+.home-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 24px 0 10px;
+}
+
+.arcade-hero-title {
+  font-family: var(--font-arcade);
+  font-size: clamp(42px, 11vw, 68px);
+  color: var(--gold);
+  text-shadow: 
+    0 0 12px var(--gold-glow),
+    0 0 30px rgba(255, 180, 0, 0.35),
+    0 4px 0 #7b5800;
+  letter-spacing: 0.12em;
+  margin: 0 0 12px;
+  line-height: 1;
+}
+
+.arcade-hero-subtitle {
+  font-family: var(--font-arcade);
+  font-size: clamp(10px, 2.7vw, 15px);
+  color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan-glow);
+  letter-spacing: 0.16em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 34px;
+}
+
+.arcade-hero-subtitle .dot-sep {
+  font-size: 16px;
+  color: var(--cyan-bright);
+}
+
+.blink {
+  animation: arcade-blink 1.25s infinite ease-in-out;
+}
+
+@keyframes arcade-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.22; }
+}
+
+/* The Vertical Arcade Menu Stack */
+.arcade-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.arc-btn {
+  position: relative;
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #091732 0%, #040c1e 100%);
+  border-radius: var(--radius-btn);
+  font-family: var(--font-arcade);
+  font-size: clamp(11px, 2.8vw, 13px);
+  letter-spacing: 0.18em;
+  color: #ffffff;
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.12s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.arc-btn-cyan {
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-glow), inset 0 0 10px rgba(0, 217, 255, 0.12);
+}
+
+.arc-btn-cyan:hover, .arc-btn-cyan:focus-visible {
+  background: linear-gradient(180deg, #0e2b58 0%, #061633 100%);
+  border-color: #58eaff;
+  box-shadow: 0 0 22px rgba(88, 234, 255, 0.75), inset 0 0 14px rgba(88, 234, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.arc-btn-green {
+  border: 2px solid var(--green);
+  box-shadow: 0 0 14px var(--green-glow), inset 0 0 10px rgba(0, 255, 117, 0.12);
+}
+
+.arc-btn-green:hover, .arc-btn-green:focus-visible {
+  background: linear-gradient(180deg, #0a3520 0%, #041a0e 100%);
+  border-color: #5cff9e;
+  box-shadow: 0 0 24px rgba(92, 255, 158, 0.8), inset 0 0 14px rgba(92, 255, 158, 0.3);
+  transform: translateY(-2px);
+}
+
+.arc-btn-red {
+  border: 2px solid var(--red);
+  box-shadow: 0 0 14px var(--red-glow), inset 0 0 10px rgba(255, 42, 109, 0.14);
+}
+
+.arc-btn-red:hover, .arc-btn-red:focus-visible {
+  background: linear-gradient(180deg, #3d0d1b 0%, #1e050c 100%);
+  border-color: #ff6895;
+  box-shadow: 0 0 24px rgba(255, 104, 149, 0.8), inset 0 0 14px rgba(255, 104, 149, 0.3);
+  transform: translateY(-2px);
+}
+
+.arc-btn:active {
+  transform: translateY(2px) scale(0.99);
+}
+
+.arc-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Card / Panel Styles */
+.arcade-card {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border-dim);
+  border-radius: var(--radius-card);
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 200, 255, 0.08);
+  margin-bottom: 12px;
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+}
+
+.arcade-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #0f2a47;
+  padding-bottom: 8px;
+}
+
+.arcade-card-title {
+  margin: 0;
+  font-family: var(--font-arcade);
+  font-size: 10.5px;
+  color: var(--cyan-bright);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* Form Fields */
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  font-family: var(--font-arcade);
+  font-size: 8.5px;
+  color: #79a2c3;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.arcade-input, .arcade-select {
+  width: 100%;
+  background: #030a1c;
+  border: 1px solid #184266;
+  border-radius: 10px;
+  color: #eaf8ff;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 11px 13px;
+  outline: none;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.arcade-input:focus, .arcade-select:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan-glow), inset 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.bgm-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.arcade-select.bgm-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%2300f0ff%22%20d%3D%22M2%204l4%205%204-5z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+  cursor: pointer;
+  border: 1px solid rgba(0, 240, 255, 0.4);
+}
+
+.arcade-select.bgm-select:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.arcade-select.bgm-select option {
+  background: #030a1c;
+  color: #eaf8ff;
+  padding: 10px;
+}
+
+.bgm-style-desc {
+  font-size: 11px;
+  color: #72a8d4;
+  line-height: 1.45;
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: rgba(0, 240, 255, 0.05);
+  border-left: 2px solid var(--cyan);
+  border-radius: 0 6px 6px 0;
+  transition: all 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-select, .bgm-style-desc {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.arcade-action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.arcade-action-row > * {
+  flex: 1;
+}
+
+/* Player Rows */
+.player-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  margin: 9px 0;
+  padding: 9px 12px;
+  background: #06132b;
+  border: 1px solid #143555;
+  border-radius: 12px;
+}
+
+.player-row .arcade-input {
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.arcade-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-arcade);
+  font-size: 8.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.arcade-toggle input {
+  accent-color: var(--cyan);
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+}
+
+.player-row .meta {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* In-Game Price Block & Chart */
+.price-display-block {
+  text-align: center;
+  padding: 12px 10px 8px;
+}
+
+.arcade-eyebrow {
+  font-family: var(--font-arcade);
+  font-size: 8.5px;
+  color: #6392b5;
+  letter-spacing: 0.18em;
+  margin-bottom: 4px;
+}
+
+.big-price {
+  font-family: var(--font-mono);
+  font-size: clamp(34px, 8.5vw, 48px);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+  text-shadow: 0 0 20px rgba(0, 255, 117, 0.35);
+}
+
+.positive { color: var(--green); text-shadow: 0 0 15px var(--green-glow); }
+.negative { color: var(--red); text-shadow: 0 0 15px var(--red-glow); }
+.neutral { color: var(--gold); text-shadow: 0 0 15px var(--gold-glow); }
+
+.chart-legend {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  margin: 6px 4px 6px;
+}
+
+.chart-wrap {
+  height: 155px;
+  position: relative;
+  margin: 6px 0 2px;
+  background: #020716;
+  border: 1px solid #102e4d;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.chart-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Breaking News Alert */
+.arcade-news {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gold);
+  background: linear-gradient(135deg, rgba(64, 46, 7, 0.85) 0%, rgba(20, 14, 2, 0.92) 100%);
+  color: #fff2b8;
+  font-size: 12px;
+  box-shadow: 0 0 18px rgba(255, 210, 59, 0.3);
+  animation: pulse-border 1.5s infinite alternate;
+}
+
+@keyframes pulse-border {
+  from { border-color: rgba(255, 210, 59, 0.6); }
+  to { border-color: rgba(255, 210, 59, 1); box-shadow: 0 0 22px rgba(255, 210, 59, 0.45); }
+}
+
+.arcade-news b {
+  font-family: var(--font-arcade);
+  font-size: 9.5px;
+  color: var(--gold);
+  letter-spacing: 0.14em;
+  display: block;
+  margin-bottom: 3px;
+}
+
+/* Trader Cards Grid */
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.player-card {
+  border: 1px solid #133352;
+  background: #051127;
+  border-radius: 10px;
+  padding: 8px 6px;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.player-card.active {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px var(--cyan-glow);
+  background: #091f3d;
+  transform: scale(1.02);
+}
+
+.player-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.player-net {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  margin: 4px 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-detail {
+  display: flex;
+  justify-content: space-around;
+  color: var(--muted);
+  font-size: 9.5px;
+}
+
+/* Trade Station Metrics */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.metric {
+  background: #030919;
+  border: 1px solid #123250;
+  border-radius: 8px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.metric .label {
+  font-family: var(--font-arcade);
+  font-size: 7px;
+  color: #6a92b2;
+  letter-spacing: 0.12em;
+}
+
+.metric .value {
+  font-family: var(--font-mono);
+  font-size: clamp(13px, 3.8vw, 18px);
+  font-weight: 700;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Rotary Knob Station */
+.knob-station-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 4px auto 8px;
+  width: 100%;
+}
+
+.rotary-knob-wrapper {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  cursor: grab;
+  outline: none;
+}
+
+.rotary-knob-wrapper:active {
+  cursor: grabbing;
+}
+
+.rotary-knob-wrapper:focus-visible .knob-center-cap {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px var(--cyan-glow);
+}
+
+.knob-svg-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.knob-center-cap {
+  position: relative;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #0e2a3b 0%, #030f1c 65%, #01060e 100%);
+  border: 2px solid #144840;
+  box-shadow: 
+    0 0 15px rgba(0, 255, 117, 0.25),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.knob-needle {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+}
+
+.knob-digital-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.knob-qty-number {
+  font-family: var(--font-arcade);
+  font-size: 20px;
+  color: var(--green);
+  text-shadow: 0 0 12px var(--green-glow);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.knob-qty-label {
+  font-family: var(--font-arcade);
+  font-size: 6.5px;
+  color: #4cd78a;
+  letter-spacing: 0.15em;
+  margin-top: 3px;
+}
+
+.knob-meta-row {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 320px;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  margin-top: 5px;
+  padding: 0 4px;
+}
+
+.knob-meta-item {
+  color: var(--muted);
+}
+
+.knob-meta-item strong {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.knob-meta-item.invalid strong {
+  color: var(--red);
+  text-shadow: 0 0 8px var(--red-glow);
+}
+
+.knob-presets {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.knob-preset-btn {
+  background: #041427;
+  border: 1px solid #123e5e;
+  border-radius: 6px;
+  color: #8bb7db;
+  font-family: var(--font-arcade);
+  font-size: 7.5px;
+  padding: 4px 8px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+  transition: all 0.12s;
+}
+
+.knob-preset-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+
+/* =========================================================
+   FEATURE 1: STYLISH KEYBOARD SHORTCUT GUIDE
+   ========================================================= */
+.shortcut-guide-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 6px auto 10px;
+  padding: 6px 10px;
+  background: rgba(3, 10, 24, 0.78);
+  border: 1px solid #10385c;
+  border-radius: 8px;
+  font-family: var(--font-arcade);
+  font-size: 7.5px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.shortcut-guide-bar kbd {
+  display: inline-block;
+  background: #06192c;
+  border: 1px solid var(--cyan);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--gold);
+  font-family: var(--font-arcade);
+  font-size: 7px;
+  box-shadow: 0 0 6px rgba(0, 240, 255, 0.25);
+}
+
+.shortcut-guide-bar .sc-sep {
+  color: #1a4f78;
+  font-size: 8px;
+}
+
+/* Buy / Sell / Skip Actions Matching Reference */
+.trade-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.trade-btn {
+  min-height: 46px;
+  padding: 10px 4px;
+  font-family: var(--font-arcade);
+  font-size: 11px;
+  border-radius: 10px;
+  cursor: pointer;
+  letter-spacing: 0.12em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+
+.trade-btn.buy {
+  background: linear-gradient(180deg, #073b1e 0%, #031a0c 100%);
+  border: 2px solid var(--green);
+  color: #ffffff;
+  box-shadow: 0 0 14px var(--green-glow);
+}
+
+.trade-btn.buy:hover:not(:disabled) {
+  background: linear-gradient(180deg, #0e5c30 0%, #062b14 100%);
+  box-shadow: 0 0 20px rgba(0, 255, 117, 0.8);
+  transform: translateY(-2px);
+}
+
+.trade-btn.sell {
+  background: linear-gradient(180deg, #440d1e 0%, #1e050c 100%);
+  border: 2px solid var(--red);
+  color: #ffffff;
+  box-shadow: 0 0 14px var(--red-glow);
+}
+
+.trade-btn.sell:hover:not(:disabled) {
+  background: linear-gradient(180deg, #6b1530 0%, #310714 100%);
+  box-shadow: 0 0 20px rgba(255, 42, 109, 0.8);
+  transform: translateY(-2px);
+}
+
+.trade-btn.skip {
+  background: linear-gradient(180deg, #092344 0%, #041124 100%);
+  border: 2px solid var(--cyan);
+  color: #ffffff;
+  box-shadow: 0 0 12px var(--cyan-glow);
+}
+
+.trade-btn.skip:hover:not(:disabled) {
+  background: linear-gradient(180deg, #0f396e 0%, #071f40 100%);
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+.trade-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Secondary Actions */
+.secondary-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sec-btn {
+  flex: 1;
+  padding: 8px 4px;
+  background: #041226;
+  border: 1px solid #143e62;
+  border-radius: 8px;
+  color: #92bada;
+  font-family: var(--font-arcade);
+  font-size: 8.5px;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.sec-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+/* Leaderboard Rows */
+.leader-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 4px;
+  border-bottom: 1px solid #0f2742;
+}
+
+.leader-row:last-child {
+  border-bottom: none;
+}
+
+.leader-row .rank {
+  font-family: var(--font-arcade);
+  font-size: 10px;
+  color: var(--gold);
+}
+
+.leader-name {
+  font-family: var(--font-arcade);
+  font-size: 9.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leader-meta {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.leader-score {
+  font-family: var(--font-mono);
+  color: var(--green);
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+/* Continuous Bottom Cyber News Marquee Ticker */
+.cyber-marquee-bar {
+  position: fixed;
+  bottom: 28px;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  background: rgba(2, 6, 17, 0.95);
+  border-top: 1px solid #0f2e4e;
+  border-bottom: 1px solid #0f2e4e;
+  padding: 4px 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.cyber-marquee-inner {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee-scroll 38s linear infinite;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: var(--cyan);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
+}
+
+.cyber-marquee-inner span {
+  margin: 0 16px;
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0%); }
+  to { transform: translateX(-50%); }
+}
+
+/* Persistent Bottom Footer Bar */
+.arcade-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 85;
+  background: rgba(1, 4, 12, 0.98);
+  border-top: 1px solid #0a2036;
+  backdrop-filter: blur(8px);
+  padding: 6px 14px calc(6px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+
+.footer-left {
+  color: #3b6b8b;
+  white-space: nowrap;
+}
+
+.footer-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.top-score-line {
+  color: var(--gold);
+  text-shadow: 0 0 8px var(--gold-glow);
+  font-size: 8.5px;
+}
+
+.key-hints {
+  color: #4b7899;
+  font-size: 7.5px;
+}
+
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-sound-btn {
+  background: #051429;
+  border: 1px solid #143d5c;
+  border-radius: 6px;
+  color: var(--cyan);
+  font-family: var(--font-arcade);
+  font-size: 7.5px;
+  padding: 3px 6px;
+  cursor: pointer;
+  letter-spacing: 0.1em;
+}
+
+.footer-sound-btn:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan-glow);
+}
+
+/* Toast Messages */
+.arcade-toast {
+  position: fixed;
+  z-index: 120;
+  bottom: calc(65px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 90%;
+  padding: 11px 16px;
+  border-radius: 10px;
+  background: rgba(5, 17, 40, 0.95);
+  border: 1px solid var(--cyan);
+  box-shadow: 0 0 24px rgba(0, 217, 255, 0.4);
+  font-family: var(--font-arcade);
+  font-size: 9.5px;
+  color: #ffffff;
+  text-align: center;
+  letter-spacing: 0.12em;
+  backdrop-filter: blur(8px);
+}
+
+/* Winner Celebration Card */
+.winner-card {
+  padding: 22px 10px;
+  text-align: center;
+}
+
+.winner-crown {
+  font-size: 40px;
+  color: var(--gold);
+  text-shadow: 0 0 24px var(--gold-glow);
+  margin-bottom: 4px;
+}
+
+.winner-title {
+  font-family: var(--font-arcade);
+  font-size: clamp(20px, 5.5vw, 30px);
+  color: var(--gold);
+  text-shadow: 0 0 16px var(--gold-glow);
+  margin: 6px 0;
+}
+
+.winner-name {
+  font-family: var(--font-arcade);
+  font-size: clamp(15px, 4.2vw, 20px);
+  color: var(--cyan-bright);
+  text-shadow: 0 0 12px var(--cyan-glow);
+  margin: 8px 0;
+}
+
+.winner-score {
+  font-family: var(--font-mono);
+  font-size: clamp(26px, 7.5vw, 38px);
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 20px var(--green-glow);
+  margin: 4px 0;
+}
+
+/* Modal Overlay (Quit / Confirmation) */
+.arcade-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgba(1, 4, 11, 0.85);
+  backdrop-filter: blur(6px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.arcade-modal-backdrop:not([hidden]) {
+  display: flex;
+}
+
+.arcade-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.arcade-modal-box {
+  background: linear-gradient(160deg, #091a38 0%, #030a1c 100%);
+  border: 2px solid var(--red);
+  border-radius: var(--radius-card);
+  box-shadow: 0 0 30px var(--red-glow);
+  width: 100%;
+  max-width: 400px;
+  padding: 22px 18px;
+  text-align: center;
+}
+
+.arcade-modal-title {
+  font-family: var(--font-arcade);
+  font-size: 13px;
+  color: var(--red);
+  text-shadow: 0 0 12px var(--red-glow);
+  letter-spacing: 0.16em;
+  margin: 0 0 10px;
+}
+
+.arcade-modal-text {
+  font-size: 13px;
+  color: #bfd9f0;
+  line-height: 1.5;
+  margin: 0 0 18px;
+}
+
+/* Help List */
+.help-list {
+  display: grid;
+  gap: 8px;
+}
+
+.help-item {
+  border: 1px solid #143555;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #06132a;
+}
+
+.help-item b {
+  font-family: var(--font-arcade);
+  color: var(--cyan-bright);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.help-item p {
+  font-size: 12px;
+  color: #9cbacf;
+  line-height: 1.45;
+  margin: 4px 0 0;
+}
+
+/* Accessibility & Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .blink { animation: none; opacity: 1; }
+  .arcade-news { animation: none; }
+  .arc-btn, .trade-btn, .win-btn { transition: none; }
+  .cyber-marquee-inner { animation: none; }
+  .drift-1, .drift-2, .drift-3, .drift-4 { animation: none; }
+}
+
+@media (max-width: 1080px) {
+  #floatNews2, #floatNews4 {
+    display: none; /* Keep 2 cards on medium screens */
+  }
+}
+
+@media (max-width: 820px) {
+  .floating-news-container {
+    display: none; /* Hide floating cards on mobile to prevent obstruction */
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- 1. Procedural Mathematical Background Canvas -->
+<canvas id="cyberBgCanvas" class="cyber-bg-canvas" aria-hidden="true"></canvas>
+
+<!-- 2. Feature 3 & 4: Multiline Floating Market News Stream Around Terminal -->
+<div id="floatingNewsStream" class="floating-news-container" aria-hidden="true">
+  <!-- Card 1: Top-Left -->
+  <div id="floatNews1" class="floating-news-card drift-1" style="top:9%;left:2.5%;">
+    <div class="news-card-badge">SIMULATED MARKET NEWS · MACRO</div>
+    <div class="news-card-headline">GLOBAL FED RATE DECISION EXPECTED TONIGHT</div>
+    <div class="news-card-story">Market participants are refraining from initiating large positions ahead of the central bank policy statement and press briefing. Liquidity spreads have widened slightly as dealers anticipate post-announcement volatility.</div>
+    <div class="news-card-impact">MARKET IMPACT: NEUTRAL · MARKET AWAITS CLARITY</div>
+  </div>
+
+  <!-- Card 2: Bottom-Left -->
+  <div id="floatNews2" class="floating-news-card drift-2" style="bottom:12%;left:2.5%;">
+    <div class="news-card-badge">SIMULATED MARKET NEWS · BANKING</div>
+    <div class="news-card-headline">CENTRAL BANK DIGITAL CURRENCY TRIALS EXPAND</div>
+    <div class="news-card-story">Wholesale interbank settlement trials have expanded to cross-border trading partners with zero reported latency. Regulators reaffirmed commitment to financial innovation while preserving existing monetary buffers.</div>
+    <div class="news-card-impact">MARKET IMPACT: BULLISH · EFFICIENCY GAINS ACCELERATE</div>
+  </div>
+
+  <!-- Card 3: Top-Right -->
+  <div id="floatNews3" class="floating-news-card drift-3" style="top:9%;right:2.5%;">
+    <div class="news-card-badge">SIMULATED MARKET NEWS · GLOBAL ASIA</div>
+    <div class="news-card-headline">TOKYO MARKET CLOSES UP 0.5%</div>
+    <div class="news-card-story">Asian equity indices closed in positive territory as export-heavy conglomerates benefited from resilient global orders. Regional technology suppliers posted steady advances, buoying sentiment ahead of western market opens.</div>
+    <div class="news-card-impact">MARKET IMPACT: BULLISH · REGIONAL SENTIMENT FIRM</div>
+  </div>
+
+  <!-- Card 4: Bottom-Right -->
+  <div id="floatNews4" class="floating-news-card drift-4" style="bottom:12%;right:2.5%;">
+    <div class="news-card-badge">SIMULATED MARKET NEWS · COMMODITIES</div>
+    <div class="news-card-headline">OIL PRODUCTION CUTS ANNOUNCED BY OPEC+</div>
+    <div class="news-card-story">Energy exporters have agreed to extend voluntary output quotas through the upcoming quarter to balance global supply. Rising fuel benchmark costs are triggering margin caution among transportation and manufacturing companies.</div>
+    <div class="news-card-impact">MARKET IMPACT: BEARISH · ENERGY INPUT HEADWINDS</div>
+  </div>
+</div>
+
+<div class="arcade-crt" aria-hidden="true"></div>
+
+<!-- Top Window Controls Matching Reference Screenshot -->
+<div class="win-controls" role="toolbar" aria-label="Arcade Cabinet Controls">
+  <button class="win-btn" data-action="win-min" title="Compact / Minimize View" aria-label="Minimize">─</button>
+  <button class="win-btn" data-action="win-max" title="Toggle Fullscreen (F11)" aria-label="Maximize">□</button>
+  <button class="win-btn close" data-action="win-close" title="Exit Cabinet (Esc)" aria-label="Close">✕</button>
+</div>
+
+<!-- Main Arcade Container -->
+<div class="arcade-container">
+  <div id="subTopbar" class="cyber-terminal-header" style="display:none;">
+    <div class="cyber-brand">
+      <div class="cyber-brand-title">STOCKS <span>ARCADE</span></div>
+      <div id="subTopbarTurn" class="cyber-brand-sub">TURN 1 / 50 · NORMAL MARKET</div>
+    </div>
+    <div class="cyber-header-actions">
+      <span id="modeChip" class="arcade-chip">OFFLINE</span>
+      <button class="sec-btn" style="padding:6px 10px;font-size:9px;" data-action="home">✕ MENU</button>
+    </div>
+  </div>
+
+  <main id="screen" class="screen" aria-live="polite"></main>
+</div>
+
+<!-- Continuous Scrolling Bottom Marquee News Ticker -->
+<div class="cyber-marquee-bar" aria-hidden="true">
+  <div id="marqueeTrack" class="cyber-marquee-inner">
+    <span>● TOKYO MARKET CLOSES UP 0.5%</span>
+    <span>● GLOBAL FED RATE DECISION EXPECTED TONIGHT</span>
+    <span>● OIL PRODUCTION CUTS ANNOUNCED BY OPEC+</span>
+    <span>● NASDAQ FUTURES DIP ON INFLATION FEARS</span>
+    <span>● SUPPLY CHAIN DISRUPTIONS AFFECT TECH SECTOR</span>
+    <span>● CENTRAL BANK DIGITAL CURRENCY TRIALS EXPAND</span>
+    <span>● SEMICONDUCTOR CAPITAL EXPENDITURE SURGES 24%</span>
+    <span>● TOKYO MARKET CLOSES UP 0.5%</span>
+    <span>● GLOBAL FED RATE DECISION EXPECTED TONIGHT</span>
+    <span>● OIL PRODUCTION CUTS ANNOUNCED BY OPEC+</span>
+    <span>● NASDAQ FUTURES DIP ON INFLATION FEARS</span>
+    <span>● SUPPLY CHAIN DISRUPTIONS AFFECT TECH SECTOR</span>
+    <span>● CENTRAL BANK DIGITAL CURRENCY TRIALS EXPAND</span>
+    <span>● SEMICONDUCTOR CAPITAL EXPENDITURE SURGES 24%</span>
+  </div>
+</div>
+
+<!-- Persistent Arcade Cabinet Footer with BGM & Sound Controls -->
+<footer class="arcade-footer">
+  <div class="footer-left">© STOCKS ARCADE v1.0 ARCADE 1.0</div>
+  <div class="footer-center">
+    <div class="top-score-line">TOP SCORE: <span id="topScoreDisplay">PLAYER 1 &nbsp;$4.1K</span></div>
+    <div class="key-hints">HELP: \ &nbsp; FULLSCREEN: F11 &nbsp; ESC: QUIT</div>
+  </div>
+  <div class="footer-right">
+    <button id="musicToggleBtn" class="footer-sound-btn" data-action="toggle-music" title="Toggle Background Music">
+      <span id="musicIcon">🎵</span> MUSIC
+    </button>
+    <button id="soundToggleBtn" class="footer-sound-btn" data-action="toggle-sound" title="Toggle Arcade Sound Effects">
+      <span id="soundIcon">🔊</span> SOUND
+    </button>
+  </div>
+</footer>
+
+<!-- Toast Notifications -->
+<div id="toast" class="arcade-toast" hidden></div>
+
+<!-- Quit / Exit Cabinet Modal Dialog -->
+<div id="quitModal" class="arcade-modal-backdrop" hidden style="display:none;">
+  <div class="arcade-modal-box">
+    <h2 class="arcade-modal-title">QUIT CABINET?</h2>
+    <p class="arcade-modal-text">You are currently playing Stocks Arcade. Choose your preferred exit action:</p>
+    <div class="arcade-menu">
+      <button class="arc-btn arc-btn-cyan" data-action="resume-cabinet">RESUME PLAYING</button>
+      <button class="arc-btn arc-btn-green" data-action="win-max">TOGGLE FULLSCREEN</button>
+      <button class="arc-btn arc-btn-red" data-action="reset-cabinet">RESET TO TITLE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const $ = (q, root = document) => root.querySelector(q);
+const $$ = (q, root = document) => Array.from(root.querySelectorAll(q));
+
+// Unified Master Audio Context Provider
+let masterAudioCtx = null;
+function getAudioContext() {
+  if (!masterAudioCtx && (window.AudioContext || window.webkitAudioContext)) {
+    masterAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (masterAudioCtx && masterAudioCtx.state === 'suspended') {
+    masterAudioCtx.resume().catch(() => {});
+  }
+  return masterAudioCtx;
+}
+
+// Audio Synthesizer (SFX)
+const sfx = (() => {
+  let enabled = true;
+  try {
+    const saved = localStorage.getItem('stocks.soundEnabled');
+    if (saved !== null) enabled = JSON.parse(saved);
+  } catch(e) {}
+
+  function play(type) {
+    if (!enabled) return;
+    try {
+      const c = getAudioContext();
+      if (!c) return;
+      const now = c.currentTime;
+      if (type === 'hover') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(620, now);
+        osc.frequency.exponentialRampToValueAtTime(840, now + 0.03);
+        g.gain.setValueAtTime(0.025, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc.connect(g);
+        g.connect(c.destination);
+        osc.start(now);
+        osc.stop(now + 0.03);
+      } else if (type === 'tick') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(900, now);
+        osc.frequency.exponentialRampToValueAtTime(1100, now + 0.02);
+        g.gain.setValueAtTime(0.02, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+        osc.connect(g);
+        g.connect(c.destination);
+        osc.start(now);
+        osc.stop(now + 0.02);
+      } else if (type === 'select') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(659, now + 0.05);
+        osc.frequency.setValueAtTime(880, now + 0.1);
+        g.gain.setValueAtTime(0.06, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(g);
+        g.connect(c.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      } else if (type === 'buy') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(783.99, now + 0.07);
+        g.gain.setValueAtTime(0.045, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(g);
+        g.connect(c.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      } else if (type === 'sell') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(783.99, now);
+        osc.frequency.setValueAtTime(440, now + 0.07);
+        g.gain.setValueAtTime(0.045, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(g);
+        g.connect(c.destination);
+        osc.start(now);
+        osc.stop(now + 0.16);
+      } else if (type === 'error') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.linearRampToValueAtTime(110, now + 0.12);
+        g.gain.setValueAtTime(0.07, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.connect(g);
+        g.connect(c.destination);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      }
+    } catch(e) {}
+  }
+
+  function toggle() {
+    enabled = !enabled;
+    try { localStorage.setItem('stocks.soundEnabled', JSON.stringify(enabled)); } catch(e) {}
+    updateIcon();
+    if (enabled) play('select');
+  }
+
+  function updateIcon() {
+    const icon = $('#soundIcon');
+    if (icon) icon.textContent = enabled ? '🔊' : '🔇';
+    const btn = $('#soundToggleBtn');
+    if (btn) btn.title = enabled ? 'Mute Sound FX' : 'Enable Sound FX';
+  }
+
+  return { play, toggle, updateIcon, get isEnabled() { return enabled; } };
+})();
+
+// =========================================================
+// FEATURE 2 & 7: RETRO ARCADE BACKGROUND MUSIC ENGINE (BGM)
+// 4 SELECTABLE PROCEDURAL SOUNDTRACK STYLES:
+// 1. DEFAULT: 8-Bit Chiptune Arcade (126 BPM)
+// 2. LOFI: Relaxed Chillhop Beats & Rhodes Chords (76 BPM)
+// 3. PHONK: Aggressive Bass-Heavy 808 Drift & Cowbells (138 BPM)
+// 4. JAZZ FUSION: Sophisticated Chords, Walking Bass & Synth (114 BPM)
+// =========================================================
+const bgm = (() => {
+  const STYLES = ['DEFAULT', 'LOFI', 'PHONK', 'JAZZ FUSION'];
+  let currentStyle = 'DEFAULT';
+  let enabled = true;
+  let volume = 0.85; // 0 to 1
+  let isRunning = false;
+  let bgmGain = null;
+  let bgmCompressor = null;
+  const MASTER_VOL = 0.75;
+  let nextStepTime = 0;
+  let currentStep = 0;
+  let schedulerTimer = null;
+  let noiseBuffer = null;
+  let distortionCurve = null;
+  let fadeTimeout = null;
+
+  try {
+    const savedStyle = localStorage.getItem('stocks.musicStyle');
+    if (savedStyle && STYLES.includes(savedStyle.toUpperCase())) {
+      currentStyle = savedStyle.toUpperCase();
+    }
+    const saved = localStorage.getItem('stocks.musicEnabled');
+    if (saved !== null) enabled = JSON.parse(saved);
+    const savedVol = localStorage.getItem('stocks.musicVolume');
+    if (savedVol !== null) volume = Math.max(0, Math.min(1, Number(savedVol)));
+  } catch(e) {}
+
+  // Style-specific musical timing configurations
+  const STYLE_CONFIGS = {
+    DEFAULT: {
+      tempo: 126,
+      stepInterval: 60 / 126 / 4, // ~0.119s per 16th note
+      totalSteps: 32
+    },
+    LOFI: {
+      tempo: 76,
+      stepInterval: 60 / 76 / 4, // ~0.197s per 16th note
+      totalSteps: 32
+    },
+    PHONK: {
+      tempo: 138,
+      stepInterval: 60 / 138 / 4, // ~0.1087s per 16th note
+      totalSteps: 32
+    },
+    'JAZZ FUSION': {
+      tempo: 114,
+      stepInterval: 60 / 114 / 4, // ~0.1315s per 16th note
+      totalSteps: 32
+    }
+  };
+
+  // --- STYLE 1: DEFAULT (8-Bit Arcade Chiptune in A Minor) ---
+  const defaultMelody = [
+    440.00, 0, 523.25, 0, 659.25, 0, 587.33, 0,
+    523.25, 0, 659.25, 0, 783.99, 0, 659.25, 0,
+    880.00, 0, 783.99, 0, 659.25, 0, 587.33, 0,
+    523.25, 0, 587.33, 0, 659.25, 0, 493.88, 0
+  ];
+  const defaultBass = [
+    110.00, 110.00, 130.81, 130.81, 146.83, 146.83, 164.81, 164.81,
+    110.00, 110.00, 130.81, 130.81, 146.83, 146.83, 98.00,  98.00
+  ];
+  const defaultArps = [
+    [440, 523.25, 659.25, 880], // Am
+    [523.25, 659.25, 783.99, 1046.50], // C
+    [587.33, 698.46, 880, 1174.66], // Dm
+    [659.25, 783.99, 987.77, 1318.51] // Em
+  ];
+
+  // --- STYLE 2: LOFI (Chillhop Rhodes Chords, Mellow Sub & Lead) ---
+  const lofiChords = [
+    [146.83, 220.00, 261.63, 329.63, 349.23], // Dm9 (Steps 0-7)
+    [98.00, 174.61, 246.94, 329.63, 440.00],  // G13 (Steps 8-15)
+    [130.81, 196.00, 246.94, 293.66, 329.63], // Cmaj9 (Steps 16-23)
+    [110.00, 174.61, 220.00, 277.18, 349.23]  // A7alt / Fmaj7 (Steps 24-31)
+  ];
+  const lofiBassNotes = [
+    73.42, 73.42, 98.00, 98.00, 65.41, 65.41, 55.00, 55.00
+  ];
+  const lofiMelody = [
+    0, 0, 440.00, 0, 0, 523.25, 0, 0,
+    0, 0, 493.88, 0, 0, 392.00, 0, 0,
+    0, 0, 329.63, 0, 0, 392.00, 0, 0,
+    0, 0, 440.00, 0, 0, 293.66, 0, 0
+  ];
+
+  // --- STYLE 3: PHONK (Drift Cowbells, 808 Saturated Bass & Rapid Trap Drums) ---
+  const phonkCowbellPattern = [
+    659.25, 0, 783.99, 0, 659.25, 0, 987.77, 0,
+    880.00, 0, 783.99, 0, 659.25, 0, 1174.66, 0,
+    987.77, 0, 783.99, 0, 880.00, 0, 987.77, 0,
+    1174.66, 0, 987.77, 0, 880.00, 0, 783.99, 0
+  ];
+  const phonkBassNotes = [
+    41.20, 41.20, 49.00, 49.00, 55.00, 55.00, 61.74, 73.42
+  ];
+
+  // --- STYLE 4: JAZZ FUSION (Sophisticated Chords, Walking Bass & Moog Lead) ---
+  const jazzChords = [
+    [196.00, 233.08, 293.66, 349.23, 440.00], // Gm9 (Steps 0-7)
+    [130.81, 233.08, 329.63, 440.00],          // C13 (Steps 8-15)
+    [174.61, 220.00, 261.63, 329.63, 392.00], // Fmaj9 (Steps 16-23)
+    [146.83, 185.00, 261.63, 311.13]          // D7alt (Steps 24-31)
+  ];
+  const jazzWalkingBass = [
+    98.00, 116.54, 146.83, 174.61, 164.81, 130.81, 116.54, 98.00,
+    87.31, 110.00, 130.81, 164.81, 146.83, 185.00, 220.00, 246.94
+  ];
+  const jazzLeadMelody = [
+    0, 0, 587.33, 0, 698.46, 0, 0, 783.99,
+    0, 698.46, 0, 0, 587.33, 0, 0, 523.25,
+    0, 783.99, 0, 0, 880.00, 0, 0, 1046.50,
+    0, 880.00, 0, 0, 698.46, 0, 659.25, 0
+  ];
+
+  function getNoiseBuffer(c) {
+    if (!noiseBuffer) {
+      const bufferSize = c.sampleRate * 0.12;
+      noiseBuffer = c.createBuffer(1, bufferSize, c.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+    }
+    return noiseBuffer;
+  }
+
+  function getDistortionCurve() {
+    if (!distortionCurve) {
+      const k = 22;
+      const n = 256;
+      const curve = new Float32Array(n);
+      const deg = Math.PI / 180;
+      for (let i = 0; i < n; i++) {
+        const x = (i * 2) / n - 1;
+        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+      }
+      distortionCurve = curve;
+    }
+    return distortionCurve;
+  }
+
+  function setupGain(c) {
+    if (!bgmGain) {
+      bgmCompressor = c.createDynamicsCompressor();
+      bgmCompressor.threshold.setValueAtTime(-14, c.currentTime);
+      bgmCompressor.knee.setValueAtTime(6, c.currentTime);
+      bgmCompressor.ratio.setValueAtTime(3.5, c.currentTime);
+      bgmCompressor.attack.setValueAtTime(0.003, c.currentTime);
+      bgmCompressor.release.setValueAtTime(0.15, c.currentTime);
+      bgmCompressor.connect(c.destination);
+
+      bgmGain = c.createGain();
+      bgmGain.gain.setValueAtTime(enabled ? volume * MASTER_VOL : 0, c.currentTime);
+      bgmGain.connect(bgmCompressor);
+    } else if (!fadeTimeout) {
+      bgmGain.gain.setValueAtTime(enabled ? volume * MASTER_VOL : 0, c.currentTime);
+    }
+  }
+
+  function playTone(freq, type, startTime, duration, vol, filterOpts) {
+    const c = getAudioContext();
+    if (!c || !bgmGain) return;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, startTime);
+    g.gain.setValueAtTime(vol, startTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    if (filterOpts && filterOpts.cutoff) {
+      const f = c.createBiquadFilter();
+      f.type = filterOpts.type || 'lowpass';
+      f.frequency.setValueAtTime(filterOpts.cutoff, startTime);
+      if (filterOpts.Q) f.Q.setValueAtTime(filterOpts.Q, startTime);
+      osc.connect(f);
+      f.connect(g);
+    } else {
+      osc.connect(g);
+    }
+    g.connect(bgmGain);
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  }
+
+  function playChord(freqArray, type, startTime, duration, volPerNote, filterFreq) {
+    const c = getAudioContext();
+    if (!c || !bgmGain) return;
+    const gMaster = c.createGain();
+    gMaster.gain.setValueAtTime(volPerNote, startTime);
+    gMaster.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    let output = gMaster;
+    if (filterFreq) {
+      const f = c.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(filterFreq, startTime);
+      gMaster.connect(f);
+      output = f;
+    }
+    output.connect(bgmGain);
+
+    freqArray.forEach(freq => {
+      const osc = c.createOscillator();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, startTime);
+      osc.connect(gMaster);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    });
+  }
+
+  function playPhonkCowbell(freq, startTime) {
+    const c = getAudioContext();
+    if (!c || !bgmGain) return;
+    const duration = 0.14;
+    const osc1 = c.createOscillator();
+    const osc2 = c.createOscillator();
+    osc1.type = 'square';
+    osc2.type = 'square';
+    osc1.frequency.setValueAtTime(freq, startTime);
+    osc2.frequency.setValueAtTime(freq * 1.485, startTime);
+
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(Math.min(2200, Math.max(700, freq * 1.15)), startTime);
+    bp.Q.setValueAtTime(4.2, startTime);
+
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.35, startTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    osc1.connect(bp);
+    osc2.connect(bp);
+    bp.connect(g);
+    g.connect(bgmGain);
+
+    osc1.start(startTime);
+    osc2.start(startTime);
+    osc1.stop(startTime + duration);
+    osc2.stop(startTime + duration);
+  }
+
+  function playPhonkBass(freq, startTime, duration) {
+    const c = getAudioContext();
+    if (!c || !bgmGain) return;
+    const osc = c.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(freq * 1.25, startTime);
+    osc.frequency.exponentialRampToValueAtTime(freq, startTime + 0.04);
+
+    const shaper = c.createWaveShaper();
+    shaper.curve = getDistortionCurve();
+    shaper.oversample = 'none';
+
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(320, startTime);
+
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.45, startTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+    osc.connect(shaper);
+    shaper.connect(lp);
+    lp.connect(g);
+    g.connect(bgmGain);
+
+    osc.start(startTime);
+    osc.stop(startTime + duration);
+  }
+
+  function playDrum(style, type, startTime) {
+    const c = getAudioContext();
+    if (!c || !bgmGain) return;
+
+    if (style === 'LOFI') {
+      if (type === 'kick') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(85, startTime);
+        osc.frequency.exponentialRampToValueAtTime(38, startTime + 0.11);
+        g.gain.setValueAtTime(0.40, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.11);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start(startTime);
+        osc.stop(startTime + 0.11);
+      } else if (type === 'snare') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const f = c.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(1100, startTime);
+        f.Q.setValueAtTime(1.5, startTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.20, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.07);
+        src.connect(f);
+        f.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.07);
+      } else if (type === 'hat') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const f = c.createBiquadFilter();
+        f.type = 'highpass';
+        f.frequency.setValueAtTime(4500, startTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.065, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.02);
+        src.connect(f);
+        f.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.02);
+      }
+    } else if (style === 'PHONK') {
+      if (type === 'kick') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(145, startTime);
+        osc.frequency.exponentialRampToValueAtTime(38, startTime + 0.06);
+        g.gain.setValueAtTime(0.55, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.06);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start(startTime);
+        osc.stop(startTime + 0.06);
+      } else if (type === 'snare') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const f = c.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(1400, startTime);
+        f.Q.setValueAtTime(2.0, startTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.30, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.07);
+        src.connect(f);
+        f.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.07);
+      } else if (type === 'hat') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const f = c.createBiquadFilter();
+        f.type = 'highpass';
+        f.frequency.setValueAtTime(6500, startTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.10, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.022);
+        src.connect(f);
+        f.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.022);
+      }
+    } else if (style === 'JAZZ FUSION') {
+      if (type === 'kick') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(90, startTime);
+        osc.frequency.exponentialRampToValueAtTime(45, startTime + 0.08);
+        g.gain.setValueAtTime(0.35, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start(startTime);
+        osc.stop(startTime + 0.08);
+      } else if (type === 'snare') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const f = c.createBiquadFilter();
+        f.type = 'bandpass';
+        f.frequency.setValueAtTime(1800, startTime);
+        f.Q.setValueAtTime(3.0, startTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.22, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.04);
+        src.connect(f);
+        f.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.04);
+      } else if (type === 'ride') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const f = c.createBiquadFilter();
+        f.type = 'highpass';
+        f.frequency.setValueAtTime(3500, startTime);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.08, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.11);
+        src.connect(f);
+        f.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.11);
+      }
+    } else {
+      // DEFAULT (Original 8-Bit Chiptune Drums)
+      if (type === 'kick') {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(130, startTime);
+        osc.frequency.exponentialRampToValueAtTime(36, startTime + 0.08);
+        g.gain.setValueAtTime(0.48, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+        osc.connect(g);
+        g.connect(bgmGain);
+        osc.start(startTime);
+        osc.stop(startTime + 0.08);
+      } else if (type === 'hat') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.085, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.025);
+        src.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.025);
+      } else if (type === 'snare') {
+        const src = c.createBufferSource();
+        src.buffer = getNoiseBuffer(c);
+        const g = c.createGain();
+        g.gain.setValueAtTime(0.25, startTime);
+        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.06);
+        src.connect(g);
+        g.connect(bgmGain);
+        src.start(startTime);
+        src.stop(startTime + 0.06);
+      }
+    }
+  }
+
+  function scheduleStep(step, time) {
+    const cfg = STYLE_CONFIGS[currentStyle] || STYLE_CONFIGS.DEFAULT;
+    const interval = cfg.stepInterval;
+
+    if (currentStyle === 'LOFI') {
+      // 1. Warm Rhodes Electric Piano Chords on key bars
+      if (step === 0 || step === 8 || step === 16 || step === 24) {
+        const chordIdx = Math.floor(step / 8);
+        const chord = lofiChords[chordIdx % lofiChords.length];
+        playChord(chord, 'triangle', time, interval * 4.2, 0.16, 1400);
+      }
+      // 2. Mellow Sub Bass
+      if (step % 4 === 0) {
+        const bFreq = lofiBassNotes[(step / 4) % lofiBassNotes.length];
+        playTone(bFreq, 'triangle', time, interval * 3.6, 0.45, { cutoff: 260, type: 'lowpass' });
+      }
+      // 3. Relaxed Melody
+      const mFreq = lofiMelody[step];
+      if (mFreq > 0) {
+        playTone(mFreq, 'sine', time, interval * 1.8, 0.26);
+      }
+      // 4. Soft Percussion
+      if (step === 0 || step === 10 || step === 16 || step === 26) {
+        playDrum('LOFI', 'kick', time);
+      } else if (step === 8 || step === 24) {
+        playDrum('LOFI', 'snare', time);
+      } else if (step % 2 === 0) {
+        playDrum('LOFI', 'hat', time);
+      }
+
+    } else if (currentStyle === 'PHONK') {
+      // 1. Phonk Cowbell Lead
+      const cowbellFreq = phonkCowbellPattern[step];
+      if (cowbellFreq > 0) {
+        playPhonkCowbell(cowbellFreq, time);
+      }
+      // 2. Distorted Saturated 808 Sub-Bass
+      if (step % 4 === 0) {
+        const bFreq = phonkBassNotes[(step / 4) % phonkBassNotes.length];
+        playPhonkBass(bFreq, time, interval * 3.4);
+      }
+      // 3. Trap Phonk Drums
+      if (step === 0 || step === 6 || step === 10 || step === 16 || step === 22 || step === 26) {
+        playDrum('PHONK', 'kick', time);
+      } else if (step === 4 || step === 12 || step === 20 || step === 28) {
+        playDrum('PHONK', 'snare', time);
+      }
+      // Rolling hats: 8th notes + trap rolls on steps 14-15 and 30-31
+      if (step % 2 === 0 || step === 15 || step === 31) {
+        playDrum('PHONK', 'hat', time);
+      }
+
+    } else if (currentStyle === 'JAZZ FUSION') {
+      // 1. Jazz Comping Chords (Syncopated)
+      if (step === 0 || step === 3 || step === 8 || step === 11 || step === 16 || step === 19 || step === 24 || step === 27) {
+        const chordIdx = Math.floor(step / 8);
+        const chord = jazzChords[chordIdx % jazzChords.length];
+        playChord(chord, 'sine', time, interval * 2.5, 0.16, 2200);
+      }
+      // 2. Walking Jazz Slap Bass
+      if (step % 2 === 0) {
+        const bFreq = jazzWalkingBass[(step / 2) % jazzWalkingBass.length];
+        playTone(bFreq, 'triangle', time, interval * 1.7, 0.40, { cutoff: 500, type: 'lowpass' });
+      }
+      // 3. Improvised Fusion Synth Lead
+      const mFreq = jazzLeadMelody[step];
+      if (mFreq > 0) {
+        playTone(mFreq, 'sawtooth', time, interval * 1.5, 0.22, { cutoff: 2400, Q: 2.0, type: 'lowpass' });
+      }
+      // 4. Jazz Swing Ride & Percussion
+      if (step === 0 || step === 4 || step === 6 || step === 8 || step === 12 || step === 14 || step === 16 || step === 20 || step === 22 || step === 24 || step === 28 || step === 30) {
+        playDrum('JAZZ FUSION', 'ride', time);
+      }
+      if (step === 4 || step === 12 || step === 20 || step === 28) {
+        playDrum('JAZZ FUSION', 'snare', time);
+      } else if (step === 0 || step === 8 || step === 16 || step === 24) {
+        playDrum('JAZZ FUSION', 'kick', time);
+      }
+
+    } else {
+      // DEFAULT (Original 8-Bit Arcade Chiptune)
+      // 1. Lead Melody
+      const mFreq = defaultMelody[step];
+      if (mFreq > 0) {
+        playTone(mFreq, 'square', time, interval * 1.6, 0.24);
+      }
+      // 2. Bass (Triangle) every 2 steps
+      if (step % 2 === 0) {
+        const bFreq = defaultBass[(step / 2) % defaultBass.length];
+        playTone(bFreq, 'triangle', time, interval * 1.8, 0.40);
+      }
+      // 3. Arpeggio shimmer
+      const chordIdx = Math.floor(step / 8);
+      const chord = defaultArps[chordIdx % defaultArps.length];
+      const arpFreq = chord[step % chord.length];
+      playTone(arpFreq, 'sawtooth', time, interval * 0.75, 0.10);
+
+      // 4. Synthesized Rhythm Percussion
+      if (step % 8 === 0) {
+        playDrum('DEFAULT', 'kick', time);
+      } else if (step % 8 === 4) {
+        playDrum('DEFAULT', 'snare', time);
+      } else if (step % 2 === 1) {
+        playDrum('DEFAULT', 'hat', time);
+      }
+    }
+  }
+
+  function scheduler() {
+    try {
+      const c = getAudioContext();
+      if (!c) return;
+      if (c.state === 'suspended') {
+        c.resume().catch(() => {});
+        return;
+      }
+      setupGain(c);
+      const cfg = STYLE_CONFIGS[currentStyle] || STYLE_CONFIGS.DEFAULT;
+
+      // Prevent past backlog if tab was backgrounded or delayed
+      if (nextStepTime < c.currentTime) {
+        nextStepTime = c.currentTime + 0.05;
+      }
+
+      const scheduleAhead = 0.12; // lookahead window
+      while (nextStepTime < c.currentTime + scheduleAhead) {
+        scheduleStep(currentStep, nextStepTime);
+        nextStepTime += cfg.stepInterval;
+        currentStep = (currentStep + 1) % cfg.totalSteps;
+      }
+    } catch (e) {
+      console.warn('BGM scheduler tick error:', e);
+    }
+  }
+
+  function start() {
+    if (isRunning) return;
+    const c = getAudioContext();
+    if (!c) return;
+    if (c.state === 'suspended') {
+      c.resume().catch(() => {});
+    }
+    setupGain(c);
+    isRunning = true;
+    currentStep = 0;
+    nextStepTime = c.currentTime + 0.05;
+    schedulerTimer = setInterval(scheduler, 25);
+    updateIcon();
+  }
+
+  function stop() {
+    if (!isRunning) return;
+    isRunning = false;
+    if (schedulerTimer) {
+      clearInterval(schedulerTimer);
+      schedulerTimer = null;
+    }
+    if (fadeTimeout) {
+      clearTimeout(fadeTimeout);
+      fadeTimeout = null;
+    }
+  }
+
+  function toggle() {
+    enabled = !enabled;
+    try { localStorage.setItem('stocks.musicEnabled', JSON.stringify(enabled)); } catch(e) {}
+    const c = getAudioContext();
+    if (c && c.state === 'suspended') {
+      c.resume().catch(() => {});
+    }
+    if (c && bgmGain) {
+      bgmGain.gain.setValueAtTime(enabled ? volume * MASTER_VOL : 0, c.currentTime);
+    }
+    if (enabled && !isRunning) {
+      start();
+    }
+    updateIcon();
+  }
+
+  function setVolume(v) {
+    volume = Math.max(0, Math.min(1, v));
+    try { localStorage.setItem('stocks.musicVolume', JSON.stringify(volume)); } catch(e) {}
+    const c = getAudioContext();
+    if (c && bgmGain && enabled) {
+      bgmGain.gain.setValueAtTime(volume * MASTER_VOL, c.currentTime);
+    }
+    const display = $('#musicVolDisplay');
+    if (display) display.textContent = `${Math.round(volume * 100)}%`;
+  }
+
+  function setStyle(styleName) {
+    const s = String(styleName || '').toUpperCase();
+    if (!STYLES.includes(s)) return;
+    if (s === currentStyle) return;
+
+    currentStyle = s;
+    try {
+      localStorage.setItem('stocks.musicStyle', currentStyle);
+    } catch(e) {}
+
+    // Update UI dropdown & description if present on screen
+    const sel = $('#bgmStyleSelect');
+    if (sel && sel.value !== currentStyle) sel.value = currentStyle;
+    const desc = $('#bgmStyleDesc');
+    if (desc) desc.textContent = getStyleDescription(currentStyle);
+
+    // If audio is muted or not running, simply remain silent and return
+    if (!isRunning || !enabled) {
+      return;
+    }
+
+    const c = getAudioContext();
+    if (!c || !bgmGain) return;
+
+    if (fadeTimeout) {
+      clearTimeout(fadeTimeout);
+      fadeTimeout = null;
+    }
+
+    const fadeDuration = 0.22; // 220ms smooth crossfade
+    const now = c.currentTime;
+
+    // Smoothly fade out current track to eliminate audio pops
+    bgmGain.gain.cancelScheduledValues(now);
+    bgmGain.gain.setValueAtTime(bgmGain.gain.value, now);
+    bgmGain.gain.linearRampToValueAtTime(0.0001, now + fadeDuration);
+
+    fadeTimeout = setTimeout(() => {
+      fadeTimeout = null;
+      if (!isRunning) return;
+      const ctx = getAudioContext();
+      if (!ctx || !bgmGain) return;
+
+      currentStep = 0;
+      nextStepTime = ctx.currentTime + 0.05;
+
+      if (enabled) {
+        bgmGain.gain.cancelScheduledValues(ctx.currentTime);
+        bgmGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        bgmGain.gain.linearRampToValueAtTime(volume * MASTER_VOL, ctx.currentTime + fadeDuration);
+      } else {
+        bgmGain.gain.setValueAtTime(0, ctx.currentTime);
+      }
+    }, Math.round(fadeDuration * 1000));
+  }
+
+  function getStyleDescription(style) {
+    switch (String(style || '').toUpperCase()) {
+      case 'LOFI':
+        return 'LOFI — Relaxed, atmospheric beats, warm electric-piano chords, mellow bass, soft percussion, and laid-back melodies.';
+      case 'PHONK':
+        return 'PHONK — Energetic, bass-heavy arcade beats, distorted synthesized bass, rhythmic cowbell leads, and an intense trading atmosphere.';
+      case 'JAZZ FUSION':
+        return 'JAZZ FUSION — Sophisticated electric-piano chords, syncopated bass, jazzy synthesized melodies, and lively percussion.';
+      case 'DEFAULT':
+      default:
+        return 'DEFAULT — The original retro 8-bit arcade soundtrack with chiptune melodies, arpeggios, synthesized bass pulses, and nostalgic arcade rhythms.';
+    }
+  }
+
+  function updateIcon() {
+    const icon = $('#musicIcon');
+    if (icon) icon.textContent = enabled ? '🎵' : '🔇';
+    const btn = $('#musicToggleBtn');
+    if (btn) btn.title = enabled ? 'Mute Background Music' : 'Enable Background Music';
+  }
+
+  function initOnGesture() {
+    if (enabled && !isRunning) {
+      start();
+    }
+  }
+
+  return {
+    start,
+    stop,
+    toggle,
+    setVolume,
+    setStyle,
+    getStyle() { return currentStyle; },
+    getAvailableStyles() { return [...STYLES]; },
+    getStyleDescription,
+    updateIcon,
+    initOnGesture,
+    get isEnabled() { return enabled; },
+    getVolume() { return volume; }
+  };
+})();
+window.bgm = bgm;
+
+// =========================================================
+// 3. MATHEMATICAL PROCEDURAL BACKGROUND CANVAS ENGINE
+// =========================================================
+const proceduralBg = (() => {
+  const canvas = $('#cyberBgCanvas');
+  if (!canvas) return { init: () => {}, cleanup: () => {} };
+  const ctx = canvas.getContext('2d');
+  let animationId = null;
+  let startTime = performance.now();
+  let width = 0, height = 0, dpr = 1;
+
+  // Procedural particles
+  const particles = Array.from({ length: 48 }, (_, i) => ({
+    xNorm: (i * 0.021 + Math.sin(i * 9)) % 1,
+    yNorm: (i * 0.023 + Math.cos(i * 7)) % 1,
+    speed: 0.02 + (i % 5) * 0.015,
+    size: 1 + (i % 3) * 0.7,
+    alpha: 0.2 + (i % 4) * 0.18,
+    color: (i % 3 === 0) ? '#00f0ff' : ((i % 3 === 1) ? '#ff2a6d' : '#00ff75')
+  }));
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+  }
+
+  function draw(t) {
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, width, height);
+
+    // Layer 1: Perspective Coordinate Grid
+    ctx.strokeStyle = 'rgba(0, 200, 255, 0.055)';
+    ctx.lineWidth = 1;
+    const gridSpacing = 42;
+    for (let x = 0; x < width; x += gridSpacing) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    for (let y = 0; y < height; y += gridSpacing) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    // Layer 2: Mathematical Flowing Market Waves
+    // Wave A: Electric Magenta Wave
+    ctx.beginPath();
+    const waveAY = height * 0.52;
+    ctx.moveTo(0, waveAY);
+    for (let x = 0; x <= width; x += 8) {
+      const xNorm = x / width;
+      const y = waveAY +
+        Math.sin(xNorm * 9.2 + t * 0.6) * 34 +
+        Math.sin(xNorm * 18.5 - t * 0.4) * 16 +
+        Math.cos(xNorm * 4.2 + t * 0.2) * 20;
+      ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = 'rgba(255, 42, 109, 0.28)';
+    ctx.lineWidth = 2.4;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = 'rgba(255, 42, 109, 0.4)';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Wave B: Neon Cyan Wave
+    ctx.beginPath();
+    const waveBY = height * 0.62;
+    ctx.moveTo(0, waveBY);
+    for (let x = 0; x <= width; x += 8) {
+      const xNorm = x / width;
+      const y = waveBY +
+        Math.cos(xNorm * 8.4 + t * 0.55) * 36 +
+        Math.sin(xNorm * 15.2 + t * 0.7) * 18;
+      ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.lineWidth = 2.2;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = 'rgba(0, 240, 255, 0.4)';
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Layer 3: Procedural Financial Icons / Schematics in Background Margins
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255, 210, 59, 0.25)';
+    ctx.fillText('$', 55, 95 + Math.sin(t * 0.8) * 4);
+    ctx.fillStyle = 'rgba(243, 68, 255, 0.25)';
+    ctx.fillText('¥', 110, 140 + Math.cos(t * 0.7) * 5);
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.fillText('£', 50, 195 + Math.sin(t * 0.9) * 4);
+    ctx.fillStyle = 'rgba(0, 255, 117, 0.25)';
+    ctx.fillText('€', 105, 250 + Math.cos(t * 0.85) * 5);
+    ctx.fillStyle = 'rgba(255, 170, 0, 0.25)';
+    ctx.fillText('元', 60, 305 + Math.sin(t * 0.75) * 4);
+
+    // Left bottom: Neon Arcade Cabinets Wireframe Outline
+    const arcX = 40, arcY = height - 190;
+    if (arcY > 260) {
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
+      ctx.lineWidth = 1.6;
+      ctx.strokeRect(arcX, arcY, 44, 70);
+      ctx.strokeRect(arcX + 6, arcY + 8, 32, 28);
+      ctx.strokeRect(arcX + 54, arcY + 12, 44, 70);
+      ctx.strokeRect(arcX + 60, arcY + 20, 32, 28);
+    }
+
+    // Right side: Geometric Gold Bar & Gem Wireframes
+    const rX = width - 85;
+    if (rX > 200) {
+      ctx.strokeStyle = 'rgba(255, 210, 59, 0.25)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(rX - 35, 75);
+      ctx.lineTo(rX + 15, 60);
+      ctx.lineTo(rX + 45, 72);
+      ctx.lineTo(rX - 5, 87);
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+      ctx.beginPath();
+      ctx.moveTo(rX, 155);
+      ctx.lineTo(rX + 28, 140);
+      ctx.lineTo(rX + 44, 160);
+      ctx.lineTo(rX, 195);
+      ctx.lineTo(rX - 44, 160);
+      ctx.lineTo(rX - 28, 140);
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 42, 109, 0.25)';
+      ctx.beginPath();
+      ctx.ellipse(rX, 260, 22, 9, 0, 0, Math.PI * 2);
+      ctx.ellipse(rX, 300, 22, 9, 0, 0, Math.PI * 2);
+      ctx.moveTo(rX - 22, 260); ctx.lineTo(rX - 22, 300);
+      ctx.moveTo(rX + 22, 260); ctx.lineTo(rX + 22, 300);
+      ctx.stroke();
+    }
+
+    // Bottom-Right: Polar Radar Grid Sweep
+    const radCX = width - 110, radCY = height - 120;
+    if (radCX > 200 && radCY > 200) {
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(radCX, radCY, 42, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(radCX, radCY, 74, 0, Math.PI * 2); ctx.stroke();
+      const sweepAngle = t * 1.2;
+      ctx.beginPath();
+      ctx.moveTo(radCX, radCY);
+      ctx.lineTo(radCX + Math.cos(sweepAngle) * 74, radCY + Math.sin(sweepAngle) * 74);
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+      ctx.stroke();
+    }
+
+    // Layer 4: Floating Particles
+    particles.forEach(p => {
+      const px = ((p.xNorm * width) + Math.sin(t * 0.8 + p.speed * 20) * 15) % width;
+      const py = (height - ((p.yNorm * height + t * p.speed * 45) % height));
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.beginPath();
+      ctx.arc(px, py, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1.0;
+
+    ctx.restore();
+  }
+
+  function loop(now) {
+    const elapsed = (now - startTime) / 1000;
+    draw(elapsed);
+    animationId = requestAnimationFrame(loop);
+  }
+
+  function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    animationId = requestAnimationFrame(loop);
+  }
+
+  function cleanup() {
+    if (animationId) cancelAnimationFrame(animationId);
+    window.removeEventListener('resize', resize);
+  }
+
+  return { init, cleanup };
+})();
+
+// =========================================================
+// FEATURE 3 & 4: MULTILINE NEWS ENGINE MATCHING THE MARKET GRAPH
+// =========================================================
+const floatingNewsEngine = (() => {
+  // Rich pools of multi-line stories
+  const bullishStories = [
+    {
+      category: 'EARNINGS SURGE',
+      headline: 'TECH SECTOR EXTENDS ITS RALLY',
+      story: 'Technology shares are climbing as stronger demand expectations and improving earnings projections lift investor confidence. Buying interest has broadened across the sector, pushing the simulated index higher over several consecutive turns. Traders are now watching whether the rally can maintain its momentum.',
+      impact: 'MARKET IMPACT: BULLISH · PRICE TREND RISING'
+    },
+    {
+      category: 'COMMERCIAL EXPANSION',
+      headline: 'BREAKTHROUGH AUTOMATION CUTS PRODUCTION COSTS',
+      story: 'Proprietary enterprise automation algorithms have unlocked unprecedented operational savings across multiple divisions. Industry partners have ratified multi-year licensing commitments, significantly enhancing forward margin guidance. Institutional volume has surged on reports of accelerating commercial deployment.',
+      impact: 'MARKET IMPACT: BULLISH · FORWARD GUIDANCE UPGRADED'
+    },
+    {
+      category: 'CAPITAL INFLOWS',
+      headline: 'RECORD INSTITUTIONAL ACCUMULATION REPORTED',
+      story: 'Major investment syndicates have steadily expanded equity positions following consecutive quarters of resilient cash generation. Order-book depth indicates relentless institutional support defending ascending support corridors. Market strategists predict the current liquidity influx will sustain higher valuations.',
+      impact: 'MARKET IMPACT: BULLISH · LIQUIDITY SURGE ACCELERATES'
+    },
+    {
+      category: 'STRATEGIC MERGER',
+      headline: 'SYNERGY TARGETS BOOST MERGED ENTITY PROSPECTS',
+      story: 'Antitrust regulators have formally approved the landmark industry consolidation without demanding structural asset concessions. Executive leadership confirmed projected annual synergies exceeding $420 million across combined manufacturing lines. Equities advanced sharply as analysts reassessed competitive moat expansion.',
+      impact: 'MARKET IMPACT: BULLISH · CONSOLIDATION SYNERGIES PRICED'
+    },
+    {
+      category: 'SUPPLY CHAIN BREAKTHROUGH',
+      headline: 'LOGISTICS BOTTLENECK FULLY RESOLVED',
+      story: 'Global shipping lead times have normalized to multi-year lows, eliminating emergency air-freight surcharges. Factory inventory turnover increased by 28% over the past month, directly expanding projected quarterly operating profits. Traders greeted the efficiency restoration with decisive buy-side orders.',
+      impact: 'MARKET IMPACT: BULLISH · OPERATING SPREADS WIDENING'
+    },
+    {
+      category: 'EQUITY RESEARCH',
+      headline: 'ANALYSTS ISSUE BLANKET UPGRADES ACROSS SECTOR',
+      story: 'Leading equity research desks have unanimously raised twelve-month target multiples following stellar financial disclosures. Consensus estimates point toward double-digit dividend growth and sustained share repurchases. Portfolio managers are aggressively rotating capital into market leaders.',
+      impact: 'MARKET IMPACT: BULLISH · RATINGS UPGRADED NATIONWIDE'
+    },
+    {
+      category: 'PRODUCT ADOPTION',
+      headline: 'FLAGSHIP COMMERCIAL ADOPTION BREAKS ALL RECORDS',
+      story: 'Enterprise orders for next-generation systems have completely booked available production capacity through the next two quarters. Contract backlogs have reached historic highs as multinational enterprise clients accelerate fleet modernization. Analysts cite unprecedented barriers to entry protecting market share.',
+      impact: 'MARKET IMPACT: BULLISH · ORDER BACKLOG REACHES RECORD'
+    },
+    {
+      category: 'MONETARY EASING',
+      headline: 'CENTRAL BANK LIQUIDITY INJECTION ENCOURAGES SPECULATION',
+      story: 'Central monetary authorities have lowered benchmark rates, easing corporate borrowing costs and igniting risk-on sentiment. Ample liquidity is propelling valuation multiple expansion across growth equities. Trading floors report broad-based accumulation from retail and quantitative hedge funds alike.',
+      impact: 'MARKET IMPACT: BULLISH · CAPITAL COSTS TUMBLE'
+    }
+  ];
+
+  const bearishStories = [
+    {
+      category: 'PROFIT CAUTION',
+      headline: 'SELLING PRESSURE BUILDS AS OUTLOOK WEAKENS',
+      story: 'Investors are becoming more cautious after weaker growth expectations and concerns about narrowing profit margins weigh on market sentiment. Selling activity has increased across several simulated sectors, extending the recent decline. Traders are reassessing their positions as the market searches for support.',
+      impact: 'MARKET IMPACT: BEARISH · PRICE TREND FALLING'
+    },
+    {
+      category: 'SUPPLY BOTTLENECK',
+      headline: 'COMPONENT SHORTAGES FORCE PRODUCTION HALTS',
+      story: 'Unforeseen supplier insolvencies have abruptly interrupted final assembly schedules at several critical facilities. Delivery deferrals will drag current quarterly revenue as much as 16% below initial baseline expectations. Investors reacted by paring back holdings to mitigate prolonged downside exposure.',
+      impact: 'MARKET IMPACT: BEARISH · SUPPLY DELAYS DRAG MARGINS'
+    },
+    {
+      category: 'REGULATORY INQUIRY',
+      headline: 'COMPLIANCE AUDIT SPARKS INSTITUTIONAL OUTFLOW',
+      story: 'Federal oversight regulators have launched a comprehensive inquiry into anti-competitive pricing practices across the sector. Heightened compliance liabilities and potential fine exposure have prompted institutional desks to unwind long exposure. The market continues searching for stable technical support.',
+      impact: 'MARKET IMPACT: BEARISH · REGULATORY SCRUTINY WEIGHS'
+    },
+    {
+      category: 'BORROWING COSTS',
+      headline: 'RISING DEBT BURDENS COMPRESS EARNINGS MARGINS',
+      story: 'Elevated interbank lending rates have elevated debt servicing costs, curbing capital expenditure allocations across corporate treasuries. Financial analysts have systematically lowered future free cash flow projections in response. Heavy distribution volume suggests ongoing risk-off rebalancing.',
+      impact: 'MARKET IMPACT: BEARISH · MARGIN COMPRESSION EXPECTED'
+    },
+    {
+      category: 'ANALYST DOWNGRADES',
+      headline: 'BROKERAGE RESEARCH CUTS FORWARD VALUATIONS',
+      story: 'Key investment banks have downgraded shares to neutral after trailing customer acquisition figures disappointed forecasts. Rising overhead expenditures are outpacing top-line growth, prompting multi-tier target price reductions. Traders have aggressively shed positions across morning trading sessions.',
+      impact: 'MARKET IMPACT: BEARISH · DOWNGRADE WAVE ACCELERATES'
+    },
+    {
+      category: 'CURRENCY FRICTION',
+      headline: 'EXCHANGE RATE VOLATILITY ERODES EXPORT PROCEEDS',
+      story: 'A sharply strengthening domestic currency has eroded international profit conversion for major export-driven divisions. Overseas distributors are requesting price concessions to remain competitive against regional peers. Management confirmed foreign exchange friction will dampen quarterly headline totals.',
+      impact: 'MARKET IMPACT: BEARISH · FOREX FRICTION DAMPENS PROFIT'
+    },
+    {
+      category: 'INPUT INFLATION',
+      headline: 'SURGING ENERGY TARIFFS ERODE GROSS SPREADS',
+      story: 'Elevated industrial fuel tariffs and raw mineral costs have drastically squeezed production profitability over consecutive months. Wholesale long-term supply contracts offered little insulation against sudden spot rate escalations. Operating income declined noticeably despite steady volume output.',
+      impact: 'MARKET IMPACT: BEARISH · INPUT COSTS SQUEEZE PROFITS'
+    },
+    {
+      category: 'REVENUE MISS',
+      headline: 'REVENUE GUIDANCE WITHDRAWAL TRIGGERS DISTRIBUTION',
+      story: 'Executives formally withdrew full-year financial targets following sharp declines in consumer and commercial orders. Risk managers across prominent investment desks have initiated mandatory portfolio trimming protocols. Heavy selling pressure has pushed prices beneath key structural moving averages.',
+      impact: 'MARKET IMPACT: BEARISH · CAPITAL RETREATING TO CASH'
+    }
+  ];
+
+  const neutralStories = [
+    {
+      category: 'MARKET EQUILIBRIUM',
+      headline: 'TRADERS PAUSE AS CONFLICTING SIGNALS PERSIST',
+      story: 'Market activity has consolidated into a tight holding pattern as investors weigh divergent economic reports. While employment numbers remain resilient, industrial orders reflect cautious corporate spending. Technical resistance continues to cap upside rallies while dip-buyers defend key moving averages.',
+      impact: 'MARKET IMPACT: NEUTRAL · RANGE-BOUND CONSOLIDATION'
+    },
+    {
+      category: 'EARNINGS DIVERGENCE',
+      headline: 'MIXED EARNINGS REPORTS CREATE BALANCED ORDER BOOK',
+      story: 'Surprise revenue gains in digital divisions were tempered by unexpected margin contraction in legacy business units. The market remains undecided, oscillating around pivotal pivot levels without clear directional conviction. Both bulls and bears are awaiting definitive sector leadership before committing capital.',
+      impact: 'MARKET IMPACT: NEUTRAL · VOLATILITY COMPRESSION'
+    },
+    {
+      category: 'CENTRAL BANK WATCH',
+      headline: 'GLOBAL FED POLICY ANNOUNCEMENT AWAITED TONIGHT',
+      story: 'Market participants are refraining from initiating large positions ahead of the central bank policy statement and press briefing. Liquidity spreads have widened slightly as dealers anticipate post-announcement volatility. Trading volume remains below historical averages as market actors await clarity.',
+      impact: 'MARKET IMPACT: NEUTRAL · MARKET AWAITS CLARITY'
+    },
+    {
+      category: 'PORTFOLIO REBALANCING',
+      headline: 'INSTITUTIONAL INVESTORS REBALANCE QUARTERLY HOLDINGS',
+      story: 'Widespread portfolio rebalancing has produced conflicting buying and selling waves with no clear trend leadership. Capital is cycling rapidly between cyclical and defensive asset classes without altering broad index valuation. Traders describe the current tape as choppy and rotational.',
+      impact: 'MARKET IMPACT: NEUTRAL · CHOPPY TRADING ENVIRONMENT'
+    },
+    {
+      category: 'COMMODITY STABILITY',
+      headline: 'COMMODITY FUTURES STABILIZE AFTER SHARP SWINGS',
+      story: 'Wholesale commodity benchmarks are settling into equilibrium following several sessions of erratic swings. Stabilized input forecasts are allowing manufacturers to recalibrate production projections without altering pricing structures. Equilibrium pricing dominates order book transactions.',
+      impact: 'MARKET IMPACT: NEUTRAL · VOLATILITY SUBSIDING'
+    },
+    {
+      category: 'TECHNICAL CHOP',
+      headline: 'EQUITY INDEX OSCILLATES NEAR HISTORICAL BENCHMARK',
+      story: 'Technical resistance overhead continues to cap upside rallies, while active dip-buyers vigorously defend key moving averages. Traders are waiting for an unmistakable breakout before committing fresh leverage. The sideways corridor is keeping short-term volatility muted.',
+      impact: 'MARKET IMPACT: NEUTRAL · TESTING CHART EQUILIBRIUM'
+    },
+    {
+      category: 'MACRO SIGNALS',
+      headline: 'EARNINGS AND INFLATION SIGNALS SEND MIXED MESSAGES',
+      story: 'Corporate balance sheets show resilient operational cash reserves, but stubborn input costs complicate margin forecasting. Conflicting interpretations have created balanced, two-sided market action without persistent trend direction. Market participants expect range-bound oscillation to continue.',
+      impact: 'MARKET IMPACT: NEUTRAL · CONSOLIDATION PATTERN'
+    },
+    {
+      category: 'SECTOR ROTATION',
+      headline: 'SECTOR ROTATION BALANCES BROAD MARKET INDICATORS',
+      story: 'Profit-taking in leading tech leaders has been offset by renewed interest in value and infrastructure stocks. The broader simulated market continues trading within a well-defined horizontal corridor. Investors are selectively repositioning rather than executing broad directional trades.',
+      impact: 'MARKET IMPACT: NEUTRAL · ROTATIONAL STABILITY'
+    }
+  ];
+
+  // Fisher-Yates Shuffle-Bags ensuring no-repeat cycle exhaustion
+  const bags = {
+    bullish: { queue: [], all: bullishStories },
+    bearish: { queue: [], all: bearishStories },
+    neutral: { queue: [], all: neutralStories }
+  };
+
+  function getNextStory(type) {
+    const bag = bags[type] || bags.neutral;
+    if (bag.queue.length === 0) {
+      bag.queue = [...bag.all].sort(() => Math.random() - 0.5);
+    }
+    return bag.queue.pop();
+  }
+
+  // Feature 4: Read actual price history & trend to guarantee news matches the chart!
+  function determineSentiment() {
+    if (game && game.news) {
+      return game.news.impact >= 1.0 ? 'bullish' : 'bearish';
+    }
+    if (!game || !game.history || game.history.length < 2) {
+      return 'neutral';
+    }
+    const h = game.history;
+    const windowSize = Math.min(4, h.length - 1);
+    const startP = h[h.length - 1 - windowSize];
+    const endP = h[h.length - 1];
+    const pct = startP > 0 ? ((endP - startP) / startP) * 100 : 0;
+
+    if (pct >= 1.2) return 'bullish';
+    if (pct <= -1.2) return 'bearish';
+    return 'neutral';
+  }
+
+  let timerId = null;
+
+  function updateCard(slotNum, storyObj) {
+    const card = $(`#floatNews${slotNum}`);
+    if (!card) return;
+    card.classList.remove('active');
+    setTimeout(() => {
+      const turnText = game ? `TURN ${game.turn + 1}` : 'ARCADE';
+      card.innerHTML = `
+        <div class="news-card-badge">SIMULATED MARKET NEWS · ${storyObj.category} · ${turnText}</div>
+        <div class="news-card-headline">${storyObj.headline}</div>
+        <div class="news-card-story">${storyObj.story}</div>
+        <div class="news-card-impact">${storyObj.impact}</div>
+      `;
+      card.className = `floating-news-card drift-${slotNum} news-${storyObj.sentiment || determineSentiment()} active`;
+    }, 700);
+  }
+
+  function rotate() {
+    const slotToChange = Math.floor(Math.random() * 4) + 1;
+    const sentiment = determineSentiment();
+    const story = getNextStory(sentiment);
+    story.sentiment = sentiment;
+    updateCard(slotToChange, story);
+  }
+
+  function onMarketUpdate() {
+    // When the market takes a step, immediately update Slot 1 with a story matching the real chart!
+    const sentiment = determineSentiment();
+    let story;
+    if (game && game.news) {
+      story = {
+        category: 'BREAKING EVENT',
+        headline: game.news.title,
+        story: `${game.news.desc}. Traders and automated market algorithms are rapidly pricing the impact across sector valuations, creating immediate volatility in share pricing.`,
+        impact: game.news.impact >= 1 ? 'MARKET IMPACT: BULLISH · PRICE SPIKE' : 'MARKET IMPACT: BEARISH · SHARP CONTRACTION',
+        sentiment: game.news.impact >= 1 ? 'bullish' : 'bearish'
+      };
+    } else {
+      story = getNextStory(sentiment);
+      story.sentiment = sentiment;
+    }
+    updateCard(1, story);
+  }
+
+  function init() {
+    // Seed initial 4 slots with diverse news matching current market
+    for (let i = 1; i <= 4; i++) {
+      const sentiment = (i === 1 || i === 3) ? 'bullish' : (i === 2 ? 'bearish' : 'neutral');
+      const s = getNextStory(sentiment);
+      s.sentiment = sentiment;
+      const card = $(`#floatNews${i}`);
+      if (card) {
+        const turnText = game ? `TURN ${game.turn + 1}` : 'ARCADE';
+        card.innerHTML = `
+          <div class="news-card-badge">SIMULATED MARKET NEWS · ${s.category} · ${turnText}</div>
+          <div class="news-card-headline">${s.headline}</div>
+          <div class="news-card-story">${s.story}</div>
+          <div class="news-card-impact">${s.impact}</div>
+        `;
+        card.className = `floating-news-card drift-${i} news-${sentiment} active`;
+      }
+    }
+    timerId = setInterval(rotate, 8500);
+  }
+
+  return { init, onMarketUpdate, determineSentiment };
+})();
+
+// Game Data & Defaults
+const colors = ['#00c8ff', '#00ff75', '#ffd23b', '#ff315d', '#cb70ff', '#ffac42', '#58eaff', '#f77ad8'];
+const defaultConfig = { startPrice: 10, maxTurns: 50, startCash: 200, startStocks: 10, difficulty: 'Normal', volatility: true };
+const difficultyVol = { Easy: 0.6, Normal: 1.0, Hard: 1.6, Extreme: 2.4 };
+const headlines = [
+  ['TECH BREAKTHROUGH', 'Major innovation announced', 1.15],
+  ['ECONOMIC SURGE', 'Growth exceeds expectations', 1.08],
+  ['MARKET CORRECTION', 'Analysts warn of a downturn', 0.86],
+  ['POLICY SHIFT', 'New regulations shake the sector', 0.93],
+  ['MEGA MERGER', 'Two major firms join forces', 1.12],
+  ['EARNINGS BEAT', 'Quarterly profits beat forecasts', 1.13],
+  ['SUPPLY CRISIS', 'Production delays tighten supply', 0.89],
+  ['AI GOLD RUSH', 'AI investments surge', 1.19],
+  ['INTEREST HIKE', 'Rates rise and pressure prices', 0.84]
+];
+
+let config = load('stocks.config', defaultConfig);
+config = { ...defaultConfig, ...config };
+let setupPlayers = [
+  { id: 1, name: 'PLAYER 1', ai: false, color: colors[0] },
+  { id: 2, name: 'PLAYER 2', ai: true, color: colors[1] }
+];
+let game = null, toastTimer = null, settingsReturn = 'home';
+let onlineMode = false, onlineSocket = null, onlineRoom = null, myPlayerId = null;
+let onlineConnectPending = null, intentionalOnlineClose = false;
+
+function load(k, fallback) {
+  try {
+    const v = localStorage.getItem(k);
+    return v ? JSON.parse(v) : fallback;
+  } catch(e) {
+    return fallback;
+  }
+}
+
+function save(k, v) {
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch(e) {}
+}
+
+function money(v) {
+  return '$' + Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function shortMoney(v) {
+  return '$' + Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 1 });
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function showToast(message, bad = false) {
+  const t = $('#toast');
+  t.textContent = message;
+  t.style.borderColor = bad ? 'var(--red)' : 'var(--cyan)';
+  t.style.boxShadow = bad ? '0 0 24px var(--red-glow)' : '0 0 24px var(--cyan-glow)';
+  t.hidden = false;
+  sfx.play(bad ? 'error' : 'select');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2300);
+}
+
+function updateTopScoreFooter() {
+  const scores = load('stocks.scores', []).sort((a, b) => b.netWorth - a.netWorth);
+  const display = $('#topScoreDisplay');
+  if (display) {
+    if (scores.length > 0) {
+      display.textContent = `${scores[0].name.toUpperCase()}  ${shortMoney(scores[0].netWorth)}`;
+    } else {
+      display.textContent = 'PLAYER 1  $4.1K';
+    }
+  }
+}
+
+function setScreenMode(modeTitle, showTopbar = true) {
+  const topbar = $('#subTopbar');
+  if (topbar) topbar.style.display = showTopbar ? 'flex' : 'none';
+  const chip = $('#modeChip');
+  if (chip) chip.textContent = modeTitle;
+  const turnSub = $('#subTopbarTurn');
+  if (turnSub && game) {
+    turnSub.textContent = `TURN ${Math.min(game.turn + 1, game.maxTurns)} / ${game.maxTurns} · ${esc(game.difficulty.toUpperCase())} MARKET`;
+  }
+  updateTopScoreFooter();
+}
+
+// 1. MAIN MENU SCREEN (MATCHES REFERENCE SCREENSHOT)
+function renderHome() {
+  setScreenMode('STOCKS ARCADE', false);
+
+  $('#screen').innerHTML = `
+    <div class="home-screen">
+      <h1 class="arcade-hero-title">STOCKS</h1>
+      <div class="arcade-hero-subtitle">
+        <span class="blink">INSERT COIN</span>
+        <span class="dot-sep">•</span>
+        <span>PRESS START</span>
+      </div>
+
+      <div class="arcade-menu" role="menu">
+        <button class="arc-btn arc-btn-cyan" data-action="new" role="menuitem">NEW GAME</button>
+        <button class="arc-btn arc-btn-green" data-action="multiplayer" role="menuitem">ONLINE PARTY</button>
+        <button class="arc-btn arc-btn-cyan" data-action="settings" role="menuitem">OPTIONS</button>
+        <button class="arc-btn arc-btn-cyan" data-action="leaderboard" role="menuitem">LEADERBOARD</button>
+        <button class="arc-btn arc-btn-cyan" data-action="help" role="menuitem">HOW TO PLAY</button>
+        <button class="arc-btn arc-btn-red" data-action="quit" role="menuitem">QUIT</button>
+      </div>
+    </div>
+  `;
+}
+
+// 2. ONLINE ROOMS SCREEN
+function renderMultiplayer() {
+  setScreenMode('ONLINE MULTIPLAYER', true);
+
+  $('#screen').innerHTML = `
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Online Party Terminal</h2>
+        <span class="arcade-chip">RENDER WS</span>
+      </div>
+      <p class="arcade-eyebrow" style="margin-bottom:12px;">Connect with friends over the internet using a shared room code.</p>
+
+      <div class="field">
+        <label for="onlineName">Your Trader Call-Sign</label>
+        <input id="onlineName" class="arcade-input" maxlength="22" placeholder="TRADER 1" value="${esc(load('stocks.onlineName', 'PLAYER'))}">
+      </div>
+
+      <button class="arc-btn arc-btn-green" style="margin: 4px 0 14px;" data-action="create-room">＋ CREATE NEW ROOM</button>
+
+      <div style="height:1px;background:#102c49;margin:8px 0 14px;"></div>
+
+      <div class="field">
+        <label for="joinRoomCode">Join with 6-Character Room Code</label>
+        <input id="joinRoomCode" class="arcade-input" maxlength="6" autocapitalize="characters" placeholder="e.g. 7KX4MP" value="${esc(load('stocks.roomCode', ''))}">
+      </div>
+
+      <button class="arc-btn arc-btn-cyan" data-action="join-room">JOIN ROOM →</button>
+    </div>
+
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Multiplayer Rules</h2>
+        <span class="arcade-chip">UP TO 6 PLAYERS</span>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#98b8ce;margin:0 0 8px;">
+        The host creates a private lobby and shares the 6-character room code. Players join from desktop or mobile browsers. The host starts the match once at least 2 traders are connected.
+      </p>
+      <p style="font-size:11px;color:#5a84a3;margin:0;">Simulated stock market arcade. No real money or financial accounts involved.</p>
+    </div>
+
+    <button class="arc-btn arc-btn-cyan" style="margin-top:8px;" data-action="home">← MAIN MENU</button>
+  `;
+}
+
+// 3. ONLINE LOBBY SCREEN
+function renderOnlineLobby() {
+  if (!onlineRoom) return renderMultiplayer();
+  setScreenMode('ROOM ' + onlineRoom.code, true);
+
+  const players = onlineRoom.players || [];
+  const connected = players.filter(p => p.connected).length;
+  const isHost = !!(myPlayerId && onlineRoom.hostPlayerId === myPlayerId);
+
+  $('#screen').innerHTML = `
+    <div class="arcade-card" style="text-align:center;">
+      <div class="arcade-eyebrow">ACTIVE MULTIPLAYER ROOM CODE</div>
+      <div style="font-family:var(--font-arcade);font-size:clamp(30px, 8vw, 44px);color:var(--cyan);text-shadow:0 0 18px var(--cyan-glow);letter-spacing:0.2em;margin:10px 0;">
+        ${esc(onlineRoom.code)}
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:0;">Share this 6-character code with other players to join.</p>
+    </div>
+
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Traders in Room</h2>
+        <span class="arcade-chip">${connected}/6 ONLINE</span>
+      </div>
+      ${players.map((p, i) => `
+        <div class="leader-row">
+          <div class="rank">${i + 1}</div>
+          <div>
+            <div class="leader-name" style="color:${p.color}">${esc(p.name)}${p.id === onlineRoom.hostPlayerId ? ' ★ HOST' : ''}</div>
+            <div class="leader-meta">${p.connected ? 'READY' : 'RECONNECTING / AWAY'}</div>
+          </div>
+          <span class="arcade-chip" style="border-color:${p.connected ? 'var(--green)' : 'var(--red)'};color:${p.connected ? 'var(--green)' : 'var(--red)'}">
+            ${p.connected ? '● ONLINE' : '○ AWAY'}
+          </span>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Lobby Match Settings</h2>
+        <span class="arcade-chip">HOST RULES</span>
+      </div>
+      <p style="font-size:12px;color:#a2c4dc;margin:0;">
+        ${esc(onlineRoom.settings.difficulty)} Difficulty · ${onlineRoom.settings.maxTurns} Turns · Start Cash ${money(onlineRoom.settings.startCash)} · ${onlineRoom.settings.startStocks} Shares
+      </p>
+    </div>
+
+    ${isHost ? `
+      <button class="arc-btn arc-btn-green" data-action="start-online" ${connected < 2 ? 'disabled' : ''}>
+        START MATCH (${connected} PLAYERS) →
+      </button>
+      <p style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px;">
+        ${connected < 2 ? 'Need at least 2 connected players to start.' : 'All connected players will begin simultaneously.'}
+      </p>
+    ` : `
+      <div class="arcade-card" style="text-align:center;">
+        <p class="blink" style="font-family:var(--font-arcade);font-size:11px;color:var(--cyan);margin:0;">WAITING FOR HOST TO START MATCH…</p>
+      </div>
+    `}
+
+    <button class="arc-btn arc-btn-red" style="margin-top:10px;" data-action="leave-online">LEAVE ROOM</button>
+  `;
+}
+
+// Client ID & WebSocket Helper
+function getClientId() {
+  let id = load('stocks.clientId', '');
+  if (!id) {
+    id = (Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 28);
+    save('stocks.clientId', id);
+  }
+  return id;
+}
+
+function websocketUrl(raw) {
+  let value = String(raw || '').trim().replace(/\/+$/, '');
+  if (!value) throw new Error('Enter server URL.');
+  if (/^https:\/\//i.test(value)) value = value.replace(/^https:/i, 'wss:');
+  else if (/^http:\/\//i.test(value)) value = value.replace(/^http:/i, 'ws:');
+  if (!/^wss?:\/\//i.test(value)) throw new Error('Use full URL starting with https:// or wss://.');
+  if (!/\/ws$/i.test(value)) value += '/ws';
+  return value;
+}
+
+function connectOnline(mode) {
+  const server = 'https://stocks-arcade-multiplayer.onrender.com';
+  const name = ($('#onlineName')?.value || 'PLAYER').trim().slice(0, 22) || 'PLAYER';
+  const roomCode = ($('#joinRoomCode')?.value || '').trim().toUpperCase();
+  let url;
+  try {
+    url = websocketUrl(server);
+  } catch(e) {
+    showToast(e.message, true);
+    return;
+  }
+  if (mode === 'join' && !/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$/.test(roomCode)) {
+    showToast('Enter a valid 6-character room code.', true);
+    return;
+  }
+  save('stocks.onlineName', name);
+  if (mode === 'join') save('stocks.roomCode', roomCode);
+
+  intentionalOnlineClose = true;
+  if (onlineSocket) {
+    try { onlineSocket.close(); } catch(e) {}
+  }
+  intentionalOnlineClose = false;
+
+  onlineMode = true;
+  onlineRoom = null;
+  myPlayerId = null;
+  game = null;
+  onlineConnectPending = { mode, name, roomCode };
+
+  setScreenMode('CONNECTING…', true);
+  $('#screen').innerHTML = `
+    <div class="arcade-card" style="text-align:center;padding:34px 18px;">
+      <div class="arcade-eyebrow">ESTABLISHING UPLINK</div>
+      <h2 style="font-family:var(--font-arcade);font-size:14px;color:var(--cyan);margin:12px 0;">OPENING ROOM CONNECTION…</h2>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:18px;">Initial connection may take a few moments if server is waking up.</p>
+      <button class="arc-btn arc-btn-cyan" data-action="leave-online">CANCEL</button>
+    </div>
+  `;
+
+  const sock = new WebSocket(url);
+  onlineSocket = sock;
+  const heartbeat = setInterval(() => {
+    if (onlineSocket === sock && sock.readyState === WebSocket.OPEN) {
+      try { sock.send(JSON.stringify({ type: 'ping' })); } catch(e) {}
+    }
+  }, 25000);
+
+  sock.addEventListener('open', () => {
+    if (onlineSocket !== sock) return;
+    const base = { client_id: getClientId(), player_name: name };
+    if (mode === 'create') sock.send(JSON.stringify({ type: 'create_room', ...base, settings: config }));
+    else sock.send(JSON.stringify({ type: 'join_room', ...base, room_code: roomCode }));
+  });
+
+  sock.addEventListener('message', event => {
+    if (onlineSocket !== sock) return;
+    let msg;
+    try { msg = JSON.parse(event.data); } catch(e) {
+      showToast('Received invalid server response.', true);
+      return;
+    }
+    if (msg.type === 'error') {
+      showToast(msg.message || 'Online room error.', true);
+      if (!onlineRoom) {
+        onlineMode = false;
+        onlineConnectPending = null;
+        const failed = onlineSocket;
+        onlineSocket = null;
+        if (failed) { try { failed.close(); } catch(e) {} }
+        renderMultiplayer();
+      }
+      return;
+    }
+    if (msg.type === 'state') {
+      onlineRoom = msg.room;
+      myPlayerId = msg.you?.playerId || myPlayerId;
+      if (msg.game) {
+        game = { ...msg.game, quantity: game?.quantity ?? 10 };
+        floatingNewsEngine.onMarketUpdate();
+        if (game.ended) {
+          const order = [...game.players].sort((a, b) => netWorth(b) - netWorth(a));
+          renderWinner(order);
+        } else {
+          renderGame();
+        }
+      } else {
+        renderOnlineLobby();
+      }
+    }
+  });
+
+  sock.addEventListener('error', () => {
+    if (onlineSocket === sock) {
+      showToast('Cannot connect. Check server status.', true);
+    }
+  });
+
+  sock.addEventListener('close', () => {
+    clearInterval(heartbeat);
+    if (onlineSocket !== sock) return;
+    onlineSocket = null;
+    if (onlineMode && !intentionalOnlineClose) {
+      onlineMode = false;
+      onlineRoom = null;
+      myPlayerId = null;
+      showToast('Connection closed. Reconnect from Online Rooms.', true);
+      renderMultiplayer();
+    }
+  });
+}
+
+function sendOnline(payload) {
+  if (!onlineSocket || onlineSocket.readyState !== WebSocket.OPEN) {
+    showToast('Not connected to room server.', true);
+    return;
+  }
+  onlineSocket.send(JSON.stringify(payload));
+}
+
+function leaveOnline() {
+  const old = onlineSocket;
+  intentionalOnlineClose = true;
+  if (old && old.readyState === WebSocket.OPEN) {
+    try { old.send(JSON.stringify({ type: 'leave_room' })); } catch(e) {}
+  }
+  onlineMode = false;
+  onlineRoom = null;
+  myPlayerId = null;
+  onlineConnectPending = null;
+  game = null;
+  onlineSocket = null;
+  if (old) { try { old.close(); } catch(e) {} }
+  intentionalOnlineClose = false;
+}
+
+// 4. PLAYER SETUP SCREEN
+function renderSetup() {
+  setScreenMode('PLAYER SETUP', true);
+
+  $('#screen').innerHTML = `
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Trader Roster</h2>
+        <span class="arcade-chip">${setupPlayers.length}/6 TRADERS</span>
+      </div>
+      <div id="playerRows">
+        ${setupPlayers.map((p, i) => `
+          <div class="player-row" data-id="${p.id}">
+            <input class="arcade-input player-name" maxlength="22" data-name="${p.id}" value="${esc(p.name)}" aria-label="Player ${i+1} name">
+            <label class="arcade-toggle">
+              <input type="checkbox" data-ai="${p.id}" ${p.ai ? 'checked' : ''} ${i === 0 ? 'disabled' : ''}> CPU
+            </label>
+            <div class="meta">
+              <span style="color:${p.color}">● TRADER ${i+1}</span>
+              <span>${i === 0 ? 'HUMAN (YOU)' : (p.ai ? 'CPU OPPONENT' : 'HUMAN PLAYER')}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="arcade-action-row">
+        <button class="arc-btn arc-btn-cyan" data-action="addplayer" ${setupPlayers.length >= 6 ? 'disabled' : ''}>＋ ADD TRADER</button>
+        <button class="arc-btn arc-btn-red" data-action="removeplayer" ${setupPlayers.length <= 1 ? 'disabled' : ''}>− REMOVE</button>
+      </div>
+    </div>
+
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Match Settings</h2>
+        <span class="arcade-chip">${config.difficulty.toUpperCase()}</span>
+      </div>
+      <div class="summary-grid">
+        <div class="metric"><div class="label">START PRICE</div><div class="value">${money(config.startPrice)}</div></div>
+        <div class="metric"><div class="label">START CASH</div><div class="value">${money(config.startCash)}</div></div>
+        <div class="metric"><div class="label">SHARES</div><div class="value">${config.startStocks}</div></div>
+      </div>
+      <button class="arc-btn arc-btn-cyan" style="margin-top:8px;min-height:38px;font-size:11px;" data-action="settings">CONFIGURE SETTINGS</button>
+    </div>
+
+    <div class="arcade-action-row">
+      <button class="arc-btn arc-btn-cyan" data-action="home">← MENU</button>
+      <button class="arc-btn arc-btn-green" data-action="start">START TRADING →</button>
+    </div>
+  `;
+}
+
+// 5. OPTIONS SCREEN WITH BGM CONTROLS
+function renderSettings() {
+  setScreenMode('OPTIONS', true);
+
+  $('#screen').innerHTML = `
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Arcade Configuration</h2>
+        <span class="arcade-chip">MARKET RULES</span>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="startPrice">Opening Price ($)</label>
+          <input id="startPrice" class="arcade-input" type="number" min="1" max="500" step="1" value="${Number(config.startPrice)}">
+        </div>
+        <div class="field">
+          <label for="maxTurns">Match Turns</label>
+          <input id="maxTurns" class="arcade-input" type="number" min="5" max="200" step="5" value="${Number(config.maxTurns)}">
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="startCash">Starting Cash ($)</label>
+          <input id="startCash" class="arcade-input" type="number" min="10" max="5000" step="10" value="${Number(config.startCash)}">
+        </div>
+        <div class="field">
+          <label for="startStocks">Starting Shares</label>
+          <input id="startStocks" class="arcade-input" type="number" min="0" max="100" step="1" value="${Number(config.startStocks)}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="difficulty">Market Volatility / Difficulty</label>
+        <select id="difficulty" class="arcade-select">
+          ${['Easy', 'Normal', 'Hard', 'Extreme'].map(d => `<option ${config.difficulty === d ? 'selected' : ''}>${d}</option>`).join('')}
+        </select>
+      </div>
+
+      <div style="margin: 10px 0;">
+        <label class="arcade-toggle" style="gap:10px;">
+          <input id="volatility" type="checkbox" ${config.volatility ? 'checked' : ''}>
+          <span>Enable Breaking News Market Swings</span>
+        </label>
+      </div>
+
+      <div style="margin: 10px 0;">
+        <label class="arcade-toggle" style="gap:10px;">
+          <input id="soundOpt" type="checkbox" ${sfx.isEnabled ? 'checked' : ''}>
+          <span>Enable Cyberpunk Sound Effects (SFX)</span>
+        </label>
+      </div>
+
+      <div style="margin: 10px 0;">
+        <label class="arcade-toggle" style="gap:10px;">
+          <input id="musicOpt" type="checkbox" ${bgm.isEnabled ? 'checked' : ''}>
+          <span>Enable Background Music</span>
+        </label>
+      </div>
+
+      <div class="field" style="margin-top: 8px;">
+        <label for="bgmStyleSelect">BACKGROUND MUSIC / BGM STYLE</label>
+        <div class="bgm-select-wrapper">
+          <select id="bgmStyleSelect" class="arcade-select bgm-select" aria-label="Background Music / BGM Style">
+            <option value="LOFI" ${bgm.getStyle() === 'LOFI' ? 'selected' : ''}>LOFI — Relaxed Atmospheric Beats &amp; Chords</option>
+            <option value="PHONK" ${bgm.getStyle() === 'PHONK' ? 'selected' : ''}>PHONK — Bass-Heavy Synth &amp; Cowbell Drift</option>
+            <option value="JAZZ FUSION" ${bgm.getStyle() === 'JAZZ FUSION' ? 'selected' : ''}>JAZZ FUSION — Sophisticated Chords &amp; Groove</option>
+            <option value="DEFAULT" ${bgm.getStyle() === 'DEFAULT' ? 'selected' : ''}>DEFAULT — Retro 8-Bit Arcade Chiptune</option>
+          </select>
+        </div>
+        <div id="bgmStyleDesc" class="bgm-style-desc">${bgm.getStyleDescription(bgm.getStyle())}</div>
+      </div>
+
+      <div class="field" style="margin-top:8px;">
+        <label for="musicVol">Music Volume (<span id="musicVolDisplay">${Math.round(bgm.getVolume() * 100)}%</span>)</label>
+        <input id="musicVol" class="arcade-input" type="range" min="0" max="100" step="5" value="${Math.round(bgm.getVolume() * 100)}" oninput="$('#musicVolDisplay').textContent = this.value + '%'">
+      </div>
+
+      <p style="font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px;">
+        Higher difficulty increases stock volatility. Prices and net worth are simulated gameplay values.
+      </p>
+    </div>
+
+    <div class="arcade-action-row">
+      <button class="arc-btn arc-btn-cyan" data-action="backsettings">CANCEL</button>
+      <button class="arc-btn arc-btn-green" data-action="savesettings">SAVE OPTIONS</button>
+    </div>
+  `;
+
+  const bgmSel = $('#bgmStyleSelect');
+  if (bgmSel) {
+    bgmSel.addEventListener('change', (e) => {
+      bgm.setStyle(e.target.value);
+      const desc = $('#bgmStyleDesc');
+      if (desc) desc.textContent = bgm.getStyleDescription(e.target.value);
+      sfx.play('click');
+    });
+  }
+}
+
+function readSettings() {
+  const num = (id, def, min, max) => {
+    const raw = $(id)?.value ?? '';
+    const parsed = Number(raw);
+    const value = (String(raw).trim() !== '' && Number.isFinite(parsed)) ? parsed : def;
+    return Math.max(min, Math.min(max, value));
+  };
+  config = {
+    startPrice: num('#startPrice', 10, 1, 500),
+    maxTurns: Math.round(num('#maxTurns', 50, 5, 200)),
+    startCash: num('#startCash', 200, 10, 5000),
+    startStocks: Math.round(num('#startStocks', 10, 0, 100)),
+    difficulty: $('#difficulty')?.value || 'Normal',
+    volatility: !!$('#volatility')?.checked
+  };
+  save('stocks.config', config);
+
+  const soundVal = $('#soundOpt')?.checked;
+  if (soundVal !== undefined && soundVal !== sfx.isEnabled) {
+    sfx.toggle();
+  }
+
+  const musicVal = $('#musicOpt')?.checked;
+  if (musicVal !== undefined && musicVal !== bgm.isEnabled) {
+    bgm.toggle();
+  }
+
+  const bgmStyleVal = $('#bgmStyleSelect')?.value;
+  if (bgmStyleVal) {
+    bgm.setStyle(bgmStyleVal);
+  }
+
+  const musicVolVal = $('#musicVol')?.value;
+  if (musicVolVal !== undefined) {
+    bgm.setVolume(Number(musicVolVal) / 100);
+  }
+}
+
+// Local Game Engine
+function makeGame() {
+  const roster = setupPlayers.map((p, i) => ({
+    id: p.id,
+    name: (p.name || `PLAYER ${i + 1}`).trim().slice(0, 22) || `PLAYER ${i + 1}`,
+    ai: i === 0 ? false : !!p.ai,
+    color: p.color,
+    cash: config.startCash,
+    stocks: config.startStocks,
+    tradeHistory: []
+  }));
+  const p = config.startPrice;
+  game = {
+    players: roster,
+    price: p,
+    history: [p * 0.96, p * 0.985, p * 0.975, p],
+    turn: 0,
+    turnIndex: 0,
+    maxTurns: config.maxTurns,
+    difficulty: config.difficulty,
+    volatility: config.volatility,
+    news: null,
+    rsi: 50,
+    ended: false,
+    quantity: 10,
+    startPrice: p
+  };
+  game.history = game.history.map(x => Math.max(0.01, x));
+  game.players.forEach(pl => { pl.history = []; });
+  stepMarket(true);
+  game.turn = 0;
+  game.turnIndex = 0;
+  renderGame();
+  runAiTurns();
+}
+
+function netWorth(p) {
+  return p.cash + p.stocks * game.price;
+}
+
+function rsi() {
+  let h = game.history;
+  if (h.length < 2) return 50;
+  let n = Math.min(14, h.length - 1), g = 0, l = 0;
+  for (let i = h.length - n; i < h.length; i++) {
+    let d = h[i] - h[i - 1];
+    if (d > 0) g += d; else l -= d;
+  }
+  if (g === 0 && l === 0) return 50;
+  if (l === 0) return 100;
+  return 100 - (100 / (1 + g / l));
+}
+
+function stepMarket(initial = false) {
+  let mult = difficultyVol[game.difficulty] || 1;
+  let sig = (game.volatility ? 0.055 : 0.018) * mult;
+  let u = Math.max(0.000001, Math.random()), v = Math.random();
+  let gauss = Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  let next = game.price * Math.exp((0.001 - 0.5 * sig * sig) + sig * gauss);
+
+  if (game.volatility && !initial && Math.random() < 0.10) {
+    const ev = headlines[Math.floor(Math.random() * headlines.length)];
+    game.news = { title: ev[0], desc: ev[1], impact: ev[2] };
+    next *= ev[2];
+    setTimeout(() => {
+      if (game && game.news) {
+        game.news = null;
+        if (!game.ended) renderGame();
+      }
+    }, 3700);
+  }
+  game.price = Math.max(0.25, Math.min(200000, next));
+  game.history.push(game.price);
+  if (game.history.length > 90) game.history.shift();
+  game.rsi = rsi();
+  floatingNewsEngine.onMarketUpdate();
+}
+
+function actionTrade(action) {
+  if (!game || game.ended) return;
+  const p = game.players[game.turnIndex];
+  if (!p || p.ai) return;
+  let qty = Number(game.quantity) || 1;
+  if (action === 'buy') {
+    if (game.quantity === -1) qty = Math.min(200, Math.floor(p.cash / game.price));
+    qty = Math.max(1, Math.min(200, qty));
+    const cost = qty * game.price;
+    if (cost > p.cash + 0.005) {
+      showToast('Not enough cash for that quantity.', true);
+      return;
+    }
+    p.cash -= cost;
+    p.stocks += qty;
+    p.tradeHistory.push({ action: 'BUY', qty, price: game.price });
+    sfx.play('buy');
+    showToast(`BOUGHT ${qty} SHARE${qty === 1 ? '' : 'S'} · ${money(cost)}`);
+  } else if (action === 'sell') {
+    if (game.quantity === -1) qty = p.stocks;
+    qty = Math.max(1, Math.min(qty, p.stocks));
+    if (p.stocks < 1) {
+      showToast('You have no shares to sell.', true);
+      return;
+    }
+    if (qty > p.stocks) {
+      showToast(`Cannot sell ${qty} shares (holding ${p.stocks}).`, true);
+      return;
+    }
+    const value = qty * game.price;
+    p.stocks -= qty;
+    p.cash += value;
+    p.tradeHistory.push({ action: 'SELL', qty, price: game.price });
+    sfx.play('sell');
+    showToast(`SOLD ${qty} SHARE${qty === 1 ? '' : 'S'} · ${money(value)}`);
+  }
+  finishTurn();
+}
+
+function finishTurn() {
+  if (!game || game.ended) return;
+  game.turn += 1;
+  stepMarket();
+  if (game.turn >= game.maxTurns) {
+    endGame();
+    return;
+  }
+  game.turnIndex = (game.turnIndex + 1) % game.players.length;
+  runAiTurns();
+  if (game && !game.ended) renderGame();
+}
+
+function aiAction(p) {
+  const h = game.history, cur = game.price;
+  const last5 = h.slice(-5), avg = last5.reduce((a, b) => a + b, 0) / Math.max(1, last5.length), trend = h.length > 3 ? cur - h[h.length - 3] : 0;
+  const affordable = Math.floor(p.cash / cur);
+  if (h.length >= 5 && cur < avg * 0.975 && affordable > 0) return { a: 'buy', q: Math.min(7, affordable) };
+  if ((cur > avg * 1.045 || game.rsi > 72) && p.stocks > 0) return { a: 'sell', q: Math.min(p.stocks, Math.max(1, Math.floor(p.stocks / 3))) };
+  if (trend > 0 && Math.random() < 0.20 && affordable > 0) return { a: 'buy', q: Math.min(3, affordable) };
+  if (trend < 0 && Math.random() < 0.14 && p.stocks > 0) return { a: 'sell', q: Math.min(2, p.stocks) };
+  return { a: 'hold', q: 0 };
+}
+
+function runAiTurns() {
+  let guard = 0;
+  while (game && !game.ended && game.players[game.turnIndex].ai && guard < game.players.length + 1) {
+    const p = game.players[game.turnIndex], decision = aiAction(p);
+    if (decision.a === 'buy' && decision.q * game.price <= p.cash) {
+      p.cash -= decision.q * game.price;
+      p.stocks += decision.q;
+      p.tradeHistory.push({ action: 'BUY', qty: decision.q, price: game.price });
+    } else if (decision.a === 'sell' && decision.q <= p.stocks) {
+      p.stocks -= decision.q;
+      p.cash += decision.q * game.price;
+      p.tradeHistory.push({ action: 'SELL', qty: decision.q, price: game.price });
+    }
+    game.turn += 1;
+    stepMarket();
+    guard++;
+    if (game.turn >= game.maxTurns) {
+      endGame();
+      return;
+    }
+    game.turnIndex = (game.turnIndex + 1) % game.players.length;
+  }
+}
+
+function endGame() {
+  if (!game || game.ended) return;
+  game.ended = true;
+  const order = [...game.players].sort((a, b) => netWorth(b) - netWorth(a));
+  const winner = order[0];
+  let scores = load('stocks.scores', []);
+  scores.push({
+    name: winner.name,
+    netWorth: Number(netWorth(winner).toFixed(2)),
+    difficulty: game.difficulty,
+    turns: game.turn,
+    maxTurns: game.maxTurns,
+    date: new Date().toISOString()
+  });
+  scores.sort((a, b) => b.netWorth - a.netWorth);
+  save('stocks.scores', scores.slice(0, 30));
+  updateTopScoreFooter();
+  renderWinner(order);
+}
+
+// 6. CANVAS RETRO ARCADE STOCK CHART
+function drawChart() {
+  const c = $('#priceChart');
+  if (!c || !game) return;
+  const box = c.getBoundingClientRect();
+  if (!box.width || !box.height) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = Math.round(box.width * dpr);
+  c.height = Math.round(box.height * dpr);
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const w = box.width, h = box.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Retro cyber grid
+  ctx.strokeStyle = 'rgba(0, 200, 255, 0.12)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  for (let i = 1; i < 4; i++) {
+    let y = i * h / 4;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  const data = game.history;
+  if (data.length < 2) return;
+  const min = Math.min(...data) * 0.985, max = Math.max(...data) * 1.015, range = Math.max(0.01, max - min);
+  const pts = data.map((v, i) => ({
+    x: (i * w) / (data.length - 1),
+    y: h - 8 - ((v - min) / range) * (h - 16)
+  }));
+  const rising = data[data.length - 1] >= data[0];
+
+  // Neon gradient fill
+  let grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, rising ? 'rgba(0, 255, 117, 0.28)' : 'rgba(255, 42, 109, 0.28)');
+  grad.addColorStop(1, 'rgba(0, 217, 255, 0.0)');
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, h);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length - 1].x, h);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Neon price line
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.strokeStyle = rising ? '#00ff75' : '#ff2a6d';
+  ctx.lineWidth = 2.5;
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = ctx.strokeStyle;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Current price dot
+  const last = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = ctx.strokeStyle;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+// 7. ROTARY KNOB CONTROLLER
+const rotaryKnob = (() => {
+  const TOTAL_SEGMENTS = 26;
+  const START_ANGLE = 135;
+  const SWEEP_ANGLE = 270;
+
+  function getRange(player) {
+    if (!game) return { min: 1, max: 100, maxBuy: 10, maxSell: 0 };
+    const maxBuy = Math.max(1, Math.min(200, Math.floor(player.cash / Math.max(0.01, game.price))));
+    const maxSell = Math.max(0, player.stocks);
+    const maxPossible = Math.max(10, Math.min(200, Math.max(maxBuy, maxSell, 25)));
+    return { min: 1, max: maxPossible, maxBuy, maxSell };
+  }
+
+  function valueToFraction(val, min, max) {
+    return Math.max(0, Math.min(1, (val - min) / Math.max(1, max - min)));
+  }
+
+  function fractionToValue(frac, min, max) {
+    return Math.round(min + frac * (max - min));
+  }
+
+  function renderDialSVG(currentVal, minVal, maxVal) {
+    const frac = valueToFraction(currentVal, minVal, maxVal);
+    const activeSegmentsCount = Math.round(frac * TOTAL_SEGMENTS);
+    const cx = 62, cy = 62, r = 50;
+
+    let segmentsHtml = '';
+    for (let i = 0; i < TOTAL_SEGMENTS; i++) {
+      const segAngleDeg = START_ANGLE + (i / (TOTAL_SEGMENTS - 1)) * SWEEP_ANGLE;
+      const rad = (segAngleDeg * Math.PI) / 180;
+      const x1 = cx + (r - 7) * Math.cos(rad);
+      const y1 = cy + (r - 7) * Math.sin(rad);
+      const x2 = cx + r * Math.cos(rad);
+      const y2 = cy + r * Math.sin(rad);
+      const isActive = i <= activeSegmentsCount;
+
+      segmentsHtml += `
+        <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+              stroke="${isActive ? '#00ff75' : '#0a2e38'}"
+              stroke-width="${isActive ? '3' : '2'}"
+              stroke-linecap="round"
+              filter="${isActive ? 'url(#glowGreen)' : 'none'}"/>
+      `;
+    }
+
+    return `
+      <svg class="knob-svg-ring" viewBox="0 0 124 124">
+        <defs>
+          <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        ${segmentsHtml}
+      </svg>
+    `;
+  }
+
+  function setupKnob(player) {
+    const knobEl = $('#rotaryKnob');
+    if (!knobEl || !game) return;
+
+    const { min, max, maxBuy, maxSell } = getRange(player);
+    if (!game.quantity || game.quantity < min) game.quantity = Math.min(10, max);
+    if (game.quantity > max) game.quantity = max;
+
+    updateUI(player, game.quantity, min, max, maxBuy, maxSell);
+
+    let isDragging = false;
+
+    function handlePointerMove(e) {
+      if (!isDragging) return;
+      const rect = knobEl.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      let deg = (Math.atan2(clientY - cy, clientX - cx) * 180) / Math.PI;
+      if (deg < 0) deg += 360;
+
+      let offset = deg - START_ANGLE;
+      if (offset < 0) offset += 360;
+
+      let frac = offset / SWEEP_ANGLE;
+      if (frac > 1.1) return;
+      frac = Math.max(0, Math.min(1, frac));
+
+      const newVal = fractionToValue(frac, min, max);
+      if (newVal !== game.quantity) {
+        game.quantity = newVal;
+        sfx.play('tick');
+        updateUI(player, newVal, min, max, maxBuy, maxSell);
+      }
+    }
+
+    function startDrag(e) {
+      isDragging = true;
+      handlePointerMove(e);
+      window.addEventListener('mousemove', handlePointerMove);
+      window.addEventListener('mouseup', stopDrag);
+      window.addEventListener('touchmove', handlePointerMove, { passive: false });
+      window.addEventListener('touchend', stopDrag);
+    }
+
+    function stopDrag() {
+      if (isDragging) {
+        isDragging = false;
+        window.removeEventListener('mousemove', handlePointerMove);
+        window.removeEventListener('mouseup', stopDrag);
+        window.removeEventListener('touchmove', handlePointerMove);
+        window.removeEventListener('touchend', stopDrag);
+      }
+    }
+
+    knobEl.addEventListener('mousedown', startDrag);
+    knobEl.addEventListener('touchstart', startDrag, { passive: false });
+
+    // Mouse wheel support
+    knobEl.addEventListener('wheel', e => {
+      e.preventDefault();
+      const step = e.shiftKey ? 5 : 1;
+      const delta = e.deltaY < 0 ? step : -step;
+      const newVal = Math.max(min, Math.min(max, game.quantity + delta));
+      if (newVal !== game.quantity) {
+        game.quantity = newVal;
+        sfx.play('tick');
+        updateUI(player, newVal, min, max, maxBuy, maxSell);
+      }
+    }, { passive: false });
+
+    // Slider accessibility
+    knobEl.addEventListener('keydown', e => {
+      let delta = 0;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') delta = 1;
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') delta = -1;
+      else if (e.key === 'PageUp') delta = 5;
+      else if (e.key === 'PageDown') delta = -5;
+      else if (e.key === 'Home') game.quantity = min;
+      else if (e.key === 'End') game.quantity = max;
+
+      if (delta !== 0) {
+        e.preventDefault();
+        game.quantity = Math.max(min, Math.min(max, game.quantity + delta));
+        sfx.play('tick');
+        updateUI(player, game.quantity, min, max, maxBuy, maxSell);
+      }
+    });
+  }
+
+  function updateUI(player, val, min, max, maxBuy, maxSell) {
+    const numDisplay = $('#knobQtyNum');
+    if (numDisplay) numDisplay.textContent = val;
+
+    const knobEl = $('#rotaryKnob');
+    if (knobEl) {
+      knobEl.setAttribute('aria-valuenow', val);
+      knobEl.setAttribute('aria-valuemin', min);
+      knobEl.setAttribute('aria-valuemax', max);
+    }
+
+    const frac = valueToFraction(val, min, max);
+    const needleDeg = START_ANGLE + frac * SWEEP_ANGLE + 90;
+    const needleEl = $('#knobCap');
+    if (needleEl) {
+      needleEl.style.transform = `rotate(${needleDeg}deg)`;
+    }
+
+    const ringWrap = $('#knobRingWrap');
+    if (ringWrap) {
+      ringWrap.innerHTML = renderDialSVG(val, min, max);
+    }
+
+    const cost = val * game.price;
+    const canAfford = cost <= player.cash + 0.005;
+    const canSell = val <= player.stocks;
+
+    const costEl = $('#knobCostDisplay');
+    const sellEl = $('#knobSellDisplay');
+    const costWrap = $('#knobBuyMeta');
+    const sellWrap = $('#knobSellMeta');
+
+    if (costEl) costEl.textContent = money(cost);
+    if (sellEl) sellEl.textContent = money(cost);
+
+    if (costWrap) costWrap.classList.toggle('invalid', !canAfford);
+    if (sellWrap) sellWrap.classList.toggle('invalid', !canSell && player.stocks > 0);
+
+    const buyBtn = $('#buyBtn');
+    const sellBtn = $('#sellBtn');
+    if (buyBtn) buyBtn.title = canAfford ? `Buy ${val} shares for ${money(cost)}` : 'Insufficient Cash';
+    if (sellBtn) sellBtn.title = canSell ? `Sell ${val} shares for ${money(cost)}` : 'Exceeds Owned Shares';
+  }
+
+  function setPreset(type, player) {
+    const { min, max, maxBuy, maxSell } = getRange(player);
+    if (type === '1') game.quantity = 1;
+    else if (type === 'max-buy') game.quantity = Math.max(1, maxBuy);
+    else if (type === 'max-sell') game.quantity = Math.max(1, maxSell || 1);
+    sfx.play('select');
+    updateUI(player, game.quantity, min, max, maxBuy, maxSell);
+  }
+
+  function setQuantity(val) {
+    if (!game) return;
+    const p = onlineMode ? (game.players.find(pl => pl.id === myPlayerId) || game.players[game.turnIndex]) : game.players[game.turnIndex];
+    const { min, max, maxBuy, maxSell } = getRange(p);
+    const clamped = Math.max(min, Math.min(max, Math.round(val)));
+    game.quantity = clamped;
+    updateUI(p, clamped, min, max, maxBuy, maxSell);
+  }
+
+  return { setupKnob, setPreset, setQuantity };
+})();
+
+// 8. IN-GAME TRADING SCREEN (CYBERPUNK TERMINAL WITH KNOB & SHORTCUTS)
+function renderGame() {
+  if (!game || game.ended) return;
+  setScreenMode(
+    onlineMode && onlineRoom ? 'ROOM ' + onlineRoom.code : 'TURN ' + Math.min(game.turn + 1, game.maxTurns) + '/' + game.maxTurns,
+    true
+  );
+
+  const p = game.players[game.turnIndex];
+  const canAct = onlineMode ? (p.id === myPlayerId) : !p.ai;
+  const mine = onlineMode ? (game.players.find(pl => pl.id === myPlayerId) || p) : p;
+  const trend = game.history.length > 4 ? game.price - game.history[Math.max(0, game.history.length - 5)] : 0;
+  const trendPct = game.history.length > 1 ? ((game.price - game.history[0]) / game.history[0]) * 100 : 0;
+
+  $('#screen').innerHTML = `
+    <!-- Top Price & Chart Panel -->
+    <div class="arcade-card price-display-block">
+      <div class="arcade-eyebrow">CURRENT SHARE PRICE</div>
+      <div class="big-price ${trend >= 0 ? 'positive' : 'negative'}">
+        ${money(game.price)} <span style="font-size:22px;">${trend >= 0 ? '▲' : '▼'}</span>
+      </div>
+      <div class="chart-legend">
+        <span>${trend >= 0 ? 'UPWARD TREND' : 'DOWNWARD TREND'} (${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(2)}%)</span>
+        <span>RSI ${Math.round(game.rsi)}</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="priceChart" aria-label="Stock price history"></canvas>
+      </div>
+    </div>
+
+    ${game.news ? `
+      <div class="arcade-news">
+        <b>⚡ ${esc(game.news.title)}</b>
+        <span>${esc(game.news.desc)}</span>
+      </div>
+    ` : ''}
+
+    <!-- Active Trader Spotlight Banner -->
+    <div class="arcade-card" style="padding:10px 12px;margin-bottom:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div class="arcade-eyebrow">ACTIVE TRADER</div>
+          <strong style="color:${p.color};font-size:12px;font-family:var(--font-arcade);">● ${esc(p.name)} ${p.ai ? '· CPU' : ''}</strong>
+        </div>
+        <span class="arcade-chip" style="border-color:${canAct ? 'var(--green)' : 'var(--cyan)'};color:${canAct ? 'var(--green)' : 'var(--cyan)'}">
+          ${canAct ? 'YOUR TURN' : (onlineMode ? 'WAITING FOR ' + esc(p.name).toUpperCase() : (p.ai ? 'CPU TRADING' : 'WAITING'))}
+        </span>
+      </div>
+
+      <!-- Trader Cards Grid -->
+      <div class="market-grid">
+        ${game.players.map(pl => `
+          <div class="player-card ${pl.id === p.id ? 'active' : ''}">
+            <div class="player-title">
+              <span class="dot" style="background:${pl.color};color:${pl.color}"></span>
+              <span>${esc(pl.name)}${pl.ai ? ' · CPU' : ''}</span>
+            </div>
+            <div class="player-net ${netWorth(pl) >= config.startCash ? 'positive' : 'negative'}">
+              ${shortMoney(netWorth(pl))}
+            </div>
+            <div class="player-detail">
+              <span>$${shortMoney(pl.cash).replace('$', '')}</span>
+              <span>${pl.stocks} sh</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Trading Station with Rotary Knob & Keyboard Shortcuts -->
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Trading Station</h2>
+        <span class="arcade-chip">${canAct ? 'READY TO TRADE' : 'AWAITING MOVE'}</span>
+      </div>
+
+      <!-- Trader Metrics -->
+      <div class="summary-grid">
+        <div class="metric"><div class="label">YOUR CASH</div><div class="value">${money(mine.cash)}</div></div>
+        <div class="metric"><div class="label">YOUR SHARES</div><div class="value">${mine.stocks}</div></div>
+        <div class="metric"><div class="label">NET WORTH</div><div class="value positive">${money(netWorth(mine))}</div></div>
+      </div>
+
+      <!-- Rotary Dial Station -->
+      <div class="knob-station-wrap">
+        <div id="rotaryKnob" class="rotary-knob-wrapper" tabindex="0" role="slider" aria-label="Trading share quantity" aria-valuenow="${game.quantity || 10}">
+          <div id="knobRingWrap" style="position:absolute;inset:0;"></div>
+          <div class="knob-center-cap">
+            <div id="knobCap" style="position:absolute;inset:0;border-radius:50%;transition:transform 0.08s ease-out;">
+              <div class="knob-needle"></div>
+            </div>
+            <div class="knob-digital-readout">
+              <span id="knobQtyNum" class="knob-qty-number">${game.quantity || 10}</span>
+              <span class="knob-qty-label">SHARES</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-Time Cost / Value Preview -->
+        <div class="knob-meta-row">
+          <span id="knobBuyMeta" class="knob-meta-item">BUY COST: <strong id="knobCostDisplay">$0.00</strong></span>
+          <span id="knobSellMeta" class="knob-meta-item">SELL VAL: <strong id="knobSellDisplay">$0.00</strong></span>
+        </div>
+
+        <!-- Quick Dial Presets -->
+        <div class="knob-presets">
+          <button type="button" class="knob-preset-btn" data-action="knob-preset" data-preset="1">MIN: 1</button>
+          <button type="button" class="knob-preset-btn" data-action="knob-preset" data-preset="max-buy">MAX BUY</button>
+          <button type="button" class="knob-preset-btn" data-action="knob-preset" data-preset="max-sell">MAX SELL</button>
+        </div>
+      </div>
+
+      <!-- Feature 1: Compact Keyboard Shortcut Guide -->
+      <div class="shortcut-guide-bar">
+        <span><kbd>Q</kbd> BUY</span>
+        <span class="sc-sep">·</span>
+        <span><kbd>A</kbd> SKIP</span>
+        <span class="sc-sep">·</span>
+        <span><kbd>Z</kbd> SELL</span>
+        <span class="sc-sep">·</span>
+        <span><kbd>1–9</kbd> QUANTITY</span>
+        <span class="sc-sep">·</span>
+        <span><kbd>0</kbd> = 10</span>
+      </div>
+
+      <!-- Action Buttons Matching Reference -->
+      <div class="trade-actions">
+        <button id="buyBtn" class="trade-btn buy" data-action="buy" ${!canAct ? 'disabled' : ''}>▲ BUY</button>
+        <button class="trade-btn skip" data-action="skip" ${!canAct ? 'disabled' : ''}>SKIP</button>
+        <button id="sellBtn" class="trade-btn sell" data-action="sell" ${!canAct ? 'disabled' : ''}>▼ SELL</button>
+      </div>
+
+      <div class="secondary-actions">
+        <button class="sec-btn" data-action="leaderboard">LEADERBOARD</button>
+        <button class="sec-btn" data-action="help">HOW TO PLAY</button>
+      </div>
+    </div>
+  `;
+
+  drawChart();
+  rotaryKnob.setupKnob(mine);
+}
+
+// 9. WINNER / GAME OVER SCREEN
+function renderWinner(order) {
+  setScreenMode('MATCH COMPLETE', true);
+  const w = order[0];
+
+  $('#screen').innerHTML = `
+    <div class="arcade-card winner-card">
+      <div class="winner-crown">♛</div>
+      <div class="arcade-eyebrow">MARKET CLOSED · ${game.turn} TURNS COMPLETED</div>
+      <h1 class="winner-title">GAME OVER</h1>
+      <div class="arcade-eyebrow">MARKET CHAMPION</div>
+      <div class="winner-name">${esc(w.name)}</div>
+      <div class="winner-score">${money(netWorth(w))}</div>
+      <p style="font-size:12px;color:var(--muted);margin:6px 0 0;">Final Net Worth · ${esc(game.difficulty)} Market</p>
+    </div>
+
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Final Standings</h2>
+        <span class="arcade-chip">${order.length} TRADERS</span>
+      </div>
+      ${order.map((p, i) => `
+        <div class="leader-row">
+          <div class="rank">${i === 0 ? '♛' : i + 1}</div>
+          <div>
+            <div class="leader-name" style="color:${p.color}">${esc(p.name)}${p.ai ? ' · CPU' : ''}</div>
+            <div class="leader-meta">${p.stocks} shares · ${money(p.cash)} cash</div>
+          </div>
+          <div class="leader-score">${money(netWorth(p))}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="arcade-action-row">
+      <button class="arc-btn arc-btn-cyan" data-action="leaderboard">SCORES</button>
+      <button class="arc-btn arc-btn-green" data-action="new">PLAY AGAIN</button>
+    </div>
+    <button class="arc-btn arc-btn-cyan" style="margin-top:10px;" data-action="home">MAIN MENU</button>
+  `;
+}
+
+// 10. LEADERBOARD SCREEN
+function renderLeaderboard() {
+  setScreenMode('HIGH SCORES', true);
+  const scores = load('stocks.scores', []).sort((a, b) => b.netWorth - a.netWorth).slice(0, 20);
+
+  $('#screen').innerHTML = `
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Arcade Hall of Fame</h2>
+        <span class="arcade-chip">TOP 20</span>
+      </div>
+      ${scores.length ? scores.map((s, i) => `
+        <div class="leader-row">
+          <div class="rank">${i + 1}</div>
+          <div>
+            <div class="leader-name">${esc(s.name)}</div>
+            <div class="leader-meta">${esc(s.difficulty)} · ${s.turns} turns · ${s.date ? new Date(s.date).toLocaleDateString() : ''}</div>
+          </div>
+          <div class="leader-score">${money(s.netWorth)}</div>
+        </div>
+      `).join('') : `
+        <p style="text-align:center;padding:25px 0;font-size:13px;color:var(--muted);">
+          No recorded high scores yet. Complete a match to set your score!
+        </p>
+      `}
+    </div>
+
+    <div class="arcade-action-row">
+      <button class="arc-btn arc-btn-cyan" data-action="home">← MENU</button>
+      <button class="arc-btn arc-btn-green" data-action="new">NEW GAME</button>
+    </div>
+  `;
+}
+
+// 11. HOW TO PLAY SCREEN
+function renderHelp() {
+  setScreenMode('HOW TO PLAY', true);
+
+  $('#screen').innerHTML = `
+    <div class="arcade-card">
+      <div class="arcade-card-head">
+        <h2 class="arcade-card-title">Arcade Field Manual</h2>
+        <span class="arcade-chip">RULES</span>
+      </div>
+
+      <div class="help-list">
+        <div class="help-item">
+          <b>01 · KEYBOARD TRADING SHORTCUTS</b>
+          <p><span style="color:var(--gold);">Q</span> = Buy &nbsp;·&nbsp; <span style="color:var(--gold);">A</span> = Skip Turn &nbsp;·&nbsp; <span style="color:var(--gold);">Z</span> = Sell &nbsp;·&nbsp; <span style="color:var(--gold);">1–9</span> = Select 1 to 9 shares &nbsp;·&nbsp; <span style="color:var(--gold);">0</span> = 10 shares.</p>
+        </div>
+        <div class="help-item">
+          <b>02 · ROTARY QUANTITY DIAL</b>
+          <p>Spin the rotary knob by dragging around the ring, scrolling your mouse wheel, or pressing arrow keys to choose custom share quantities.</p>
+        </div>
+        <div class="help-item">
+          <b>03 · BUY LOW & SELL HIGH</b>
+          <p>Tap BUY to purchase shares at current market price. Lock in profits with SELL when the price ascends.</p>
+        </div>
+        <div class="help-item">
+          <b>04 · LIVE MULTILINE MARKET STORIES</b>
+          <p>Watch the real-time stock line chart and floating financial news. News stories dynamically reflect market appreciation and depreciation.</p>
+        </div>
+        <div class="help-item">
+          <b>05 · CHIPTUNE ARCADE MUSIC</b>
+          <p>Enjoy synthesized retro chiptune background music. Toggle on/off via the footer or adjust volume in Options.</p>
+        </div>
+        <div class="help-item">
+          <b>06 · CABINET SHORTCUTS</b>
+          <p><span style="color:var(--gold);">F11</span> = Fullscreen &nbsp;·&nbsp; <span style="color:var(--gold);">ESC</span> = Exit Cabinet / Menu &nbsp;·&nbsp; <span style="color:var(--gold);">\\</span> = How To Play</p>
+        </div>
+      </div>
+    </div>
+
+    <button class="arc-btn arc-btn-green" data-action="backhelp">GOT IT →</button>
+  `;
+}
+
+function readSetup() {
+  const rows = $$('.player-row');
+  setupPlayers = rows.map((row, i) => {
+    const id = Number(row.dataset.id);
+    const old = setupPlayers.find(p => p.id === id) || {};
+    return {
+      ...old,
+      id,
+      name: $(`[data-name="${id}"]`, row)?.value || `PLAYER ${i + 1}`,
+      ai: i === 0 ? false : !!$(`[data-ai="${id}"]`, row)?.checked
+    };
+  });
+}
+
+// Quit Modal Dialog Handlers
+function showQuitModal() {
+  const modal = $('#quitModal');
+  if (modal) {
+    modal.removeAttribute('hidden');
+    modal.style.display = 'flex';
+  }
+  sfx.play('select');
+}
+
+function hideQuitModal() {
+  const modal = $('#quitModal');
+  if (modal) {
+    modal.setAttribute('hidden', '');
+    modal.style.display = 'none';
+  }
+  sfx.play('select');
+}
+
+function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  } catch(e) {}
+}
+
+// Action Dispatcher
+function handleAction(action, el) {
+  sfx.play('select');
+  switch(action) {
+    case 'home':
+      if (onlineMode) leaveOnline();
+      game = null;
+      renderHome();
+      break;
+    case 'multiplayer':
+      renderMultiplayer();
+      break;
+    case 'create-room':
+      connectOnline('create');
+      break;
+    case 'join-room':
+      connectOnline('join');
+      break;
+    case 'start-online':
+      sendOnline({ type: 'start_game' });
+      break;
+    case 'leave-online':
+      leaveOnline();
+      renderHome();
+      break;
+    case 'new':
+      if (onlineMode) leaveOnline();
+      setupPlayers = [
+        { id: 1, name: 'PLAYER 1', ai: false, color: colors[0] },
+        { id: 2, name: 'PLAYER 2', ai: true, color: colors[1] }
+      ];
+      renderSetup();
+      break;
+    case 'settings':
+      settingsReturn = $('#playerRows') ? 'setup' : 'home';
+      if (settingsReturn === 'setup') readSetup();
+      renderSettings();
+      break;
+    case 'savesettings':
+      readSettings();
+      showToast('Options saved');
+      if (settingsReturn === 'setup') renderSetup();
+      else renderHome();
+      break;
+    case 'backsettings':
+      if (settingsReturn === 'setup') renderSetup();
+      else renderHome();
+      break;
+    case 'addplayer':
+      readSetup();
+      if (setupPlayers.length < 6) {
+        let id = Math.max(0, ...setupPlayers.map(p => p.id)) + 1;
+        let i = setupPlayers.length;
+        setupPlayers.push({ id, name: `PLAYER ${i + 1}`, ai: i > 0, color: colors[i % colors.length] });
+      }
+      renderSetup();
+      break;
+    case 'removeplayer':
+      readSetup();
+      if (setupPlayers.length > 1) setupPlayers.pop();
+      renderSetup();
+      break;
+    case 'start':
+      readSetup();
+      if (setupPlayers.every(p => p.ai)) {
+        showToast('Keep at least one human trader.', true);
+        return;
+      }
+      makeGame();
+      break;
+    case 'knob-preset':
+      if (game) {
+        const mine = onlineMode ? (game.players.find(pl => pl.id === myPlayerId) || game.players[game.turnIndex]) : game.players[game.turnIndex];
+        rotaryKnob.setPreset(el.dataset.preset, mine);
+      }
+      break;
+    case 'buy':
+      if (onlineMode) sendOnline({ type: 'action', action: 'buy', quantity: game?.quantity ?? 1 });
+      else actionTrade('buy');
+      break;
+    case 'sell':
+      if (onlineMode) sendOnline({ type: 'action', action: 'sell', quantity: game?.quantity ?? 1 });
+      else actionTrade('sell');
+      break;
+    case 'skip':
+      if (onlineMode) sendOnline({ type: 'action', action: 'skip', quantity: 0 });
+      else finishTurn();
+      break;
+    case 'leaderboard':
+      renderLeaderboard();
+      break;
+    case 'help':
+      renderHelp();
+      break;
+    case 'backhelp':
+      if (game && !game.ended) renderGame();
+      else if (game && game.ended) renderWinner([...game.players].sort((a, b) => netWorth(b) - netWorth(a)));
+      else renderHome();
+      break;
+    case 'quit':
+    case 'win-close':
+      showQuitModal();
+      break;
+    case 'resume-cabinet':
+      hideQuitModal();
+      break;
+    case 'reset-cabinet':
+      hideQuitModal();
+      if (onlineMode) leaveOnline();
+      game = null;
+      renderHome();
+      break;
+    case 'win-min':
+      if (document.fullscreenElement) {
+        try { document.exitFullscreen().catch(() => {}); } catch(e) {}
+      } else {
+        showToast('Minimizing view');
+      }
+      break;
+    case 'win-max':
+      toggleFullscreen();
+      break;
+    case 'toggle-sound':
+      sfx.toggle();
+      break;
+    case 'toggle-music':
+      bgm.toggle();
+      break;
+  }
+}
+
+// Global Click & Hover Listeners
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-action]');
+  if (!b) return;
+  handleAction(b.dataset.action, b);
+});
+
+document.addEventListener('mouseover', e => {
+  const b = e.target.closest('.arc-btn, .trade-btn, .sec-btn, .win-btn, .knob-preset-btn');
+  if (b && !b.disabled) {
+    sfx.play('hover');
+  }
+});
+
+// =========================================================
+// FEATURE 1: KEYBOARD SHORTCUTS (Q BUY, A SKIP, Z SELL, 1-9 QTY, 0=10)
+// =========================================================
+document.addEventListener('keydown', e => {
+  // 1. Never trigger game shortcuts if typing in text-entry controls
+  const tag = (e.target?.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) {
+    return;
+  }
+
+  // 2. Ignore repeated keydown events when holding a key
+  if (e.repeat) return;
+
+  // 3. Do not interfere with browser command shortcuts
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  // 4. Modal / Window / Help shortcuts
+  if (e.key === 'Escape') {
+    const modal = $('#quitModal');
+    if (modal && !modal.hasAttribute('hidden') && modal.style.display !== 'none') {
+      hideQuitModal();
+    } else {
+      showQuitModal();
+    }
+    return;
+  }
+  if (e.key === '\\' || e.key === '?') {
+    renderHelp();
+    return;
+  }
+  if (e.key === 'F11') {
+    e.preventDefault();
+    toggleFullscreen();
+    return;
+  }
+
+  // 5. In-Game Fast Arcade Trading Shortcuts
+  if (game && !game.ended) {
+    const p = game.players[game.turnIndex];
+    const canAct = onlineMode ? (p && p.id === myPlayerId) : (p && !p.ai);
+    const key = e.key.toLowerCase();
+
+    // Q — BUY
+    if (key === 'q') {
+      e.preventDefault();
+      if (canAct) {
+        handleAction('buy');
+      } else {
+        showToast('Waiting for your turn...', true);
+      }
+      return;
+    }
+
+    // A — SKIP
+    if (key === 'a') {
+      e.preventDefault();
+      if (canAct) {
+        handleAction('skip');
+      } else {
+        showToast('Waiting for your turn...', true);
+      }
+      return;
+    }
+
+    // Z — SELL
+    if (key === 'z') {
+      e.preventDefault();
+      if (canAct) {
+        handleAction('sell');
+      } else {
+        showToast('Waiting for your turn...', true);
+      }
+      return;
+    }
+
+    // Number keys 1-9: Select that quantity immediately
+    if (e.key >= '1' && e.key <= '9') {
+      e.preventDefault();
+      const val = parseInt(e.key, 10);
+      rotaryKnob.setQuantity(val);
+      sfx.play('tick');
+      return;
+    }
+
+    // Number key 0: Select 10 shares immediately
+    if (e.key === '0') {
+      e.preventDefault();
+      rotaryKnob.setQuantity(10);
+      sfx.play('tick');
+      return;
+    }
+  }
+
+  // 6. Menu navigation arrow keys
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (document.activeElement && document.activeElement.id === 'rotaryKnob') return;
+    const btns = $$('.arc-btn:not([disabled])');
+    if (!btns.length) return;
+    const curIdx = btns.indexOf(document.activeElement);
+    let nextIdx = 0;
+    if (curIdx >= 0) {
+      if (e.key === 'ArrowDown') nextIdx = (curIdx + 1) % btns.length;
+      else nextIdx = (curIdx - 1 + btns.length) % btns.length;
+    }
+    btns[nextIdx]?.focus();
+    sfx.play('hover');
+    e.preventDefault();
+  }
+});
+
+// Click outside modal box to close
+const quitModalEl = $('#quitModal');
+if (quitModalEl) {
+  quitModalEl.addEventListener('click', e => {
+    if (e.target === quitModalEl) hideQuitModal();
+  });
+}
+
+// User Gesture Trigger for Browser Autoplay Compliance
+function triggerAudioOnInteraction() {
+  const c = getAudioContext();
+  if (c && c.state === 'suspended') {
+    c.resume().then(() => {
+      bgm.initOnGesture();
+    }).catch(() => {
+      bgm.initOnGesture();
+    });
+  } else {
+    bgm.initOnGesture();
+  }
+}
+window.addEventListener('click', triggerAudioOnInteraction, { passive: true });
+window.addEventListener('keydown', triggerAudioOnInteraction, { passive: true });
+window.addEventListener('touchstart', triggerAudioOnInteraction, { passive: true });
+window.addEventListener('pointerdown', triggerAudioOnInteraction, { passive: true });
+
+window.addEventListener('resize', () => {
+  if (game && !game.ended && $('#priceChart')) drawChart();
+});
+
+window.addEventListener('orientationchange', () => {
+  setTimeout(() => {
+    if (game && !game.ended && $('#priceChart')) drawChart();
+  }, 100);
+});
+
+// Initialize Systems
+hideQuitModal();
+sfx.updateIcon();
+bgm.updateIcon();
+proceduralBg.init();
+floatingNewsEngine.init();
+renderHome();
+updateTopScoreFooter();
+})();
+</script>
+</body>
+</html>

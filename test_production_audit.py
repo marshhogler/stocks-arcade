@@ -30,7 +30,11 @@ os.environ["APP_ENV"] = "development"
 os.environ["JWT_SECRET"] = "production-audit-test-secret-32-bytes!!"
 
 import jwt
-from server import app, db, MathMarketEngine, AdaptiveAIEngine, create_session_token, verify_session_token, Database
+from server import (
+    app, db, MathMarketEngine, AdaptiveAIEngine,
+    create_session_token, verify_session_token, Database,
+    parse_database_url, is_valid_db_host, sanitize_database_url
+)
 
 TEST_PORT = 8566
 BASE_URL = f"http://127.0.0.1:{TEST_PORT}"
@@ -133,6 +137,37 @@ def run_all_tests():
     except RuntimeError as re:
         caught_secret_error = "JWT_SECRET" in str(re)
     check("Production Startup Fail-Fast on Insecure Default JWT_SECRET", caught_secret_error)
+
+    # 2.3 Supabase Session Pooler URL with DNS Hostname and Port 5432
+    supabase_pooler_url = "postgresql://postgres.mockref:SuperSecretPass999!@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
+    parsed_sb = parse_database_url(supabase_pooler_url)
+    sb_checks = (
+        parsed_sb["host"] == "aws-0-ap-southeast-2.pooler.supabase.com" and
+        parsed_sb["port"] == 5432 and
+        parsed_sb["user"] == "postgres.mockref" and
+        parsed_sb["database"] == "postgres" and
+        "SuperSecretPass999!" not in parsed_sb["sanitized_url"] and
+        "****" in parsed_sb["sanitized_url"]
+    )
+    check("Regression: PostgreSQL URL with DNS Hostname & Port 5432 (Supabase Pooler)", sb_checks)
+
+    # 2.4 Trace and eliminate 'does not appear to be an IPv4 or IPv6 address' exception
+    # Direct ipaddress.ip_address() on a DNS hostname raises ValueError
+    caught_ip_error = False
+    import ipaddress
+    try:
+        ipaddress.ip_address("aws-0-ap-southeast-2.pooler.supabase.com")
+    except ValueError as ve:
+        caught_ip_error = "does not appear to be an IPv4 or IPv6 address" in str(ve)
+    # is_valid_db_host safely handles DNS hostnames without raising ValueError
+    host_accepted = is_valid_db_host("aws-0-ap-southeast-2.pooler.supabase.com")
+    check("Regression: Traced and Prevented ipaddress.ip_address DNS Hostname Failure", caught_ip_error and host_accepted)
+
+    # 2.5 Credential Leakage Prevention (Sanitized Logging)
+    sample_error = "asyncpg.exceptions.CannotConnectNowError: failed to connect to postgresql://postgres.demo:P@ssw0rd123!@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres"
+    sanitized_err = sanitize_database_url(sample_error)
+    leakage_prevented = ("P@ssw0rd123!" not in sanitized_err) and ("****" in sanitized_err)
+    check("Regression: Database Credential Leakage Prevention in Logs & Exceptions", leakage_prevented)
 
     # ---------------------------------------------------------------
     # TEST GROUP 3: REGISTRATION & PASSWORD VALIDATION

@@ -19,6 +19,9 @@ import time
 import json
 import uuid
 import random
+import re
+import urllib.parse
+import ipaddress
 import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
@@ -49,6 +52,126 @@ except ImportError:
 import sqlite3
 
 # ====================================================================
+# POSTGRESQL URL PARSING & SANITIZATION (DNS HOSTNAME COMPLIANT)
+# ====================================================================
+def is_valid_db_host(host: str) -> bool:
+    """
+    Validates whether the given host is a valid IPv4/IPv6 address OR a valid DNS hostname.
+    Prevents ValueError when non-IP hostnames (e.g. Supabase Session Pooler URIs) are inspected.
+    """
+    if not host or not isinstance(host, str):
+        return False
+    host_clean = host.strip()
+    if not host_clean:
+        return False
+
+    # 1. Attempt IP address parsing (IPv4 / IPv6) safely catching ValueError
+    try:
+        ipaddress.ip_address(host_clean)
+        return True
+    except ValueError:
+        # Expected for DNS domain names; do not raise or fail!
+        pass
+
+    # 2. Accept localhost / loopback aliases
+    if host_clean.lower() in ("localhost", "127.0.0.1", "::1"):
+        return True
+
+    # 3. Validate standard DNS hostname (RFC 1123 / RFC 952)
+    # Allows cloud database endpoints, e.g. aws-0-ap-southeast-2.pooler.supabase.com
+    dns_pattern = re.compile(
+        r'^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$'
+    )
+    return bool(dns_pattern.match(host_clean))
+
+def sanitize_database_url(url_or_text: str) -> str:
+    """
+    Sanitizes database URLs and error messages to ensure credentials/passwords
+    are never printed in logs or exception traces.
+    """
+    if not url_or_text or not isinstance(url_or_text, str):
+        return ""
+    # URL parsing sanitization
+    try:
+        if "://" in url_or_text and not "\n" in url_or_text:
+            parsed = urllib.parse.urlparse(url_or_text)
+            if parsed.password:
+                user = parsed.username or ""
+                host = parsed.hostname or ""
+                port_str = f":{parsed.port}" if parsed.port else ""
+                redacted_netloc = f"{user}:****@{host}{port_str}"
+                return parsed._replace(netloc=redacted_netloc).geturl()
+    except Exception:
+        pass
+    # Regex fallback for embedded connection strings in messages
+    return re.sub(r':([^/@:\s]+)@', ':****@', url_or_text)
+
+def parse_database_url(url: str) -> Dict[str, Any]:
+    """
+    Parses and validates a PostgreSQL connection URL.
+    Supports both literal IP addresses and valid DNS hostnames
+    (e.g., Supabase Session Pooler URIs with host 'aws-0-ap-southeast-2.pooler.supabase.com' and port 5432).
+    Returns normalized connection parameters suitable for asyncpg.
+    """
+    if not url or not isinstance(url, str):
+        raise ValueError("DATABASE_URL must be a non-empty string.")
+
+    clean_url = url.strip()
+    if not (clean_url.startswith("postgres://") or clean_url.startswith("postgresql://")):
+        raise ValueError("DATABASE_URL must start with 'postgres://' or 'postgresql://'")
+
+    # Normalize scheme to postgresql:// for asyncpg and standard RFC parsing
+    if clean_url.startswith("postgres://"):
+        norm_url = "postgresql://" + clean_url[11:]
+    else:
+        norm_url = clean_url
+
+    parsed = urllib.parse.urlparse(norm_url)
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("DATABASE_URL is missing a valid host.")
+
+    if hostname.startswith("[") and hostname.endswith("]"):
+        hostname = hostname[1:-1]
+
+    if not is_valid_db_host(hostname):
+        raise ValueError(f"DATABASE_URL contains an invalid host format: {hostname!r}")
+
+    port = parsed.port or 5432
+    if not (1 <= port <= 65535):
+        raise ValueError(f"DATABASE_URL port is out of valid range (1-65535): {port}")
+
+    database = (parsed.path or "").lstrip("/") or "postgres"
+    username = urllib.parse.unquote(parsed.username) if parsed.username else None
+    password = urllib.parse.unquote(parsed.password) if parsed.password else None
+
+    # Parse query parameters (e.g. sslmode)
+    query_params = {}
+    if parsed.query:
+        qs = urllib.parse.parse_qs(parsed.query)
+        for k, v in qs.items():
+            query_params[k] = v[-1] if isinstance(v, list) and v else ""
+
+    # Supabase session/transaction poolers and cloud databases typically require SSL
+    ssl_mode = query_params.get("sslmode", "").lower()
+    needs_ssl = ssl_mode in ("require", "verify-ca", "verify-full") or (
+        hostname.lower() not in ("localhost", "127.0.0.1", "::1") and ssl_mode != "disable"
+    )
+
+    return {
+        "dsn": norm_url,
+        "host": hostname,
+        "port": port,
+        "database": database,
+        "user": username,
+        "password": password,
+        "ssl": "require" if needs_ssl else None,
+        "query": query_params,
+        "sanitized_url": sanitize_database_url(norm_url)
+    }
+
+# ====================================================================
 # CONFIGURATION & PRODUCTION FAIL-FAST VALIDATION
 # ====================================================================
 APP_ENV = os.getenv("APP_ENV", "production").strip().lower()
@@ -77,6 +200,12 @@ if APP_ENV == "production":
     if not (DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://")):
         raise RuntimeError(
             "CRITICAL STARTUP FAILURE: In production mode, DATABASE_URL must be a valid PostgreSQL connection URL."
+        )
+    try:
+        parse_database_url(DATABASE_URL)
+    except Exception as _e:
+        raise RuntimeError(
+            f"CRITICAL STARTUP FAILURE: In production mode, DATABASE_URL is invalid: {sanitize_database_url(str(_e))}"
         )
 else:
     # Development / Testing fallback
@@ -178,29 +307,42 @@ class Database:
             if not HAS_ASYNCPG:
                 raise RuntimeError("CRITICAL STARTUP FAILURE: 'asyncpg' library is required to connect to PostgreSQL in production.")
             try:
-                pg_url = self.db_url
-                if pg_url.startswith("postgres://"):
-                    pg_url = "postgresql://" + pg_url[11:]
-                self.pg_pool = await asyncpg.create_pool(pg_url, min_size=1, max_size=10, timeout=15)
-                print("[DB] Connected to PostgreSQL (Supabase) in production mode.")
+                conn_info = parse_database_url(self.db_url)
+                print(f"[DB] Initializing PostgreSQL connection to {conn_info['host']}:{conn_info['port']} (database: {conn_info['database']})...")
+                pool_kwargs = {
+                    "min_size": 1,
+                    "max_size": 10,
+                    "timeout": 15
+                }
+                if conn_info.get("ssl"):
+                    pool_kwargs["ssl"] = conn_info["ssl"]
+                self.pg_pool = await asyncpg.create_pool(conn_info["dsn"], **pool_kwargs)
+                print(f"[DB] Connected to PostgreSQL ({conn_info['host']}:{conn_info['port']}) in production mode.")
                 await self._init_pg_schema()
                 self.is_pg = True
                 return
             except Exception as e:
-                raise RuntimeError(f"CRITICAL STARTUP FAILURE: Failed to connect to PostgreSQL or initialize schema: {e}") from e
+                sanitized_msg = sanitize_database_url(str(e))
+                raise RuntimeError(f"CRITICAL STARTUP FAILURE: Failed to connect to PostgreSQL or initialize schema: {sanitized_msg}") from e
 
         # Development / Testing Mode
         if self.is_pg:
             try:
-                pg_url = self.db_url
-                if pg_url.startswith("postgres://"):
-                    pg_url = "postgresql://" + pg_url[11:]
-                self.pg_pool = await asyncpg.create_pool(pg_url, min_size=1, max_size=5, timeout=5)
-                print("[DB] Connected to PostgreSQL in dev mode.")
+                conn_info = parse_database_url(self.db_url)
+                pool_kwargs = {
+                    "min_size": 1,
+                    "max_size": 5,
+                    "timeout": 5
+                }
+                if conn_info.get("ssl"):
+                    pool_kwargs["ssl"] = conn_info["ssl"]
+                self.pg_pool = await asyncpg.create_pool(conn_info["dsn"], **pool_kwargs)
+                print(f"[DB] Connected to PostgreSQL ({conn_info['host']}:{conn_info['port']}) in dev mode.")
                 await self._init_pg_schema()
                 return
             except Exception as e:
-                print(f"[DB] PostgreSQL dev connection failed: {e}. Falling back to SQLite.")
+                sanitized_msg = sanitize_database_url(str(e))
+                print(f"[DB] PostgreSQL dev connection failed: {sanitized_msg}. Falling back to SQLite.")
                 self.is_pg = False
 
         print(f"[DB] Using local SQLite database (Development/Testing only): {self.sqlite_path}")
